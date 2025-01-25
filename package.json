@@ -1,7 +1,7 @@
 {
   "name": "avatar-ux-test",
   "version": "1.0.0",
-  "main": "index.js",
+  "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "parcel serve src/index.html",
@@ -21,12 +21,14 @@
     "url": "https://github.com/muscet44/avatar-ux-test/issues"
   },
   "homepage": "https://github.com/muscet44/avatar-ux-test#readme",
+  "dependencies": {
+    "pixi.js": "^8.7.2"
+  },
   "description": "",
   "devDependencies": {
     "cross-env": "^7.0.3",
     "gh-pages": "^6.3.0",
-    "parcel-bundler": "^1.12.5",
-    "pixi.js": "^8.7.2",
+    "parcel": "^2.0.0",
     "typescript": "^5.7.3"
   }
 }
