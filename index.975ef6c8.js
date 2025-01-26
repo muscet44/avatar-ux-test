@@ -597,210 +597,28 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 
 },{}],"8lqZg":[function(require,module,exports,__globalThis) {
 var _pixiJs = require("pixi.js");
+var _game = require("./game");
 (async ()=>{
     // Create a new application
     const app = new (0, _pixiJs.Application)();
     // Initialize the application
     await app.init({
         background: '#1099bb',
-        resizeTo: window
+        resizeTo: document.body
     });
     // Append the application canvas to the document body
     document.body.appendChild(app.canvas);
-    // Load the textures
-    await (0, _pixiJs.Assets).load([
-        'https://pixijs.com/assets/eggHead.png',
-        'https://pixijs.com/assets/flowerTop.png',
-        'https://pixijs.com/assets/helmlok.png',
-        'https://pixijs.com/assets/skully.png'
-    ]);
-    const REEL_WIDTH = 160;
-    const SYMBOL_SIZE = 150;
-    // Create different slot symbols
-    const slotTextures = [
-        (0, _pixiJs.Texture).from('https://pixijs.com/assets/eggHead.png'),
-        (0, _pixiJs.Texture).from('https://pixijs.com/assets/flowerTop.png'),
-        (0, _pixiJs.Texture).from('https://pixijs.com/assets/helmlok.png'),
-        (0, _pixiJs.Texture).from('https://pixijs.com/assets/skully.png')
-    ];
-    // Build the reels
-    const reels = [];
-    const reelContainer = new (0, _pixiJs.Container)();
-    for(let i = 0; i < 5; i++){
-        const rc = new (0, _pixiJs.Container)();
-        rc.x = i * REEL_WIDTH;
-        reelContainer.addChild(rc);
-        const reel = {
-            container: rc,
-            symbols: [],
-            position: 0,
-            previousPosition: 0,
-            blur: new (0, _pixiJs.BlurFilter)()
-        };
-        reel.blur.blurX = 0;
-        reel.blur.blurY = 0;
-        rc.filters = [
-            reel.blur
-        ];
-        // Build the symbols
-        for(let j = 0; j < 4; j++){
-            const symbol = new (0, _pixiJs.Sprite)(slotTextures[Math.floor(Math.random() * slotTextures.length)]);
-            // Scale the symbol to fit symbol area.
-            symbol.y = j * SYMBOL_SIZE;
-            symbol.scale.x = symbol.scale.y = Math.min(SYMBOL_SIZE / symbol.width, SYMBOL_SIZE / symbol.height);
-            symbol.x = Math.round((SYMBOL_SIZE - symbol.width) / 2);
-            reel.symbols.push(symbol);
-            rc.addChild(symbol);
-        }
-        reels.push(reel);
-    }
-    app.stage.addChild(reelContainer);
-    // Build top & bottom covers and position reelContainer
-    const margin = (app.screen.height - SYMBOL_SIZE * 3) / 2;
-    reelContainer.y = margin;
-    reelContainer.x = Math.round(app.screen.width - REEL_WIDTH * 5);
-    const top = new (0, _pixiJs.Graphics)().rect(0, 0, app.screen.width, margin).fill({
-        color: 0x0
-    });
-    const bottom = new (0, _pixiJs.Graphics)().rect(0, SYMBOL_SIZE * 3 + margin, app.screen.width, margin).fill({
-        color: 0x0
-    });
-    // Create gradient fill
-    const fill = new (0, _pixiJs.FillGradient)(0, 0, 0, 36 * 1.7);
-    const colors = [
-        0xffffff,
-        0x00ff99
-    ].map((color)=>(0, _pixiJs.Color).shared.setValue(color).toNumber());
-    colors.forEach((number, index)=>{
-        const ratio = index / colors.length;
-        fill.addColorStop(ratio, number);
-    });
-    // Add play text
-    const style = new (0, _pixiJs.TextStyle)({
-        fontFamily: 'Arial',
-        fontSize: 36,
-        fontStyle: 'italic',
-        fontWeight: 'bold',
-        fill: {
-            fill
-        },
-        stroke: {
-            color: 0x4a1850,
-            width: 5
-        },
-        dropShadow: {
-            color: 0x000000,
-            angle: Math.PI / 6,
-            blur: 4,
-            distance: 6
-        },
-        wordWrap: true,
-        wordWrapWidth: 440
-    });
-    const playText = new (0, _pixiJs.Text)('Spin the wheels!', style);
-    playText.x = Math.round((bottom.width - playText.width) / 2);
-    playText.y = app.screen.height - margin + Math.round((margin - playText.height) / 2);
-    bottom.addChild(playText);
-    // Add header text
-    const headerText = new (0, _pixiJs.Text)('PIXI MONSTER SLOTS!', style);
-    headerText.x = Math.round((top.width - headerText.width) / 2);
-    headerText.y = Math.round((margin - headerText.height) / 2);
-    top.addChild(headerText);
-    app.stage.addChild(top);
-    app.stage.addChild(bottom);
-    // Set the interactivity.
-    bottom.eventMode = 'static';
-    bottom.cursor = 'pointer';
-    bottom.addListener('pointerdown', ()=>{
-        startPlay();
-    });
-    let running = false;
-    // Function to start playing.
-    function startPlay() {
-        if (running) return;
-        running = true;
-        for(let i = 0; i < reels.length; i++){
-            const r = reels[i];
-            const extra = Math.floor(Math.random() * 3);
-            const target = r.position + 10 + i * 5 + extra;
-            const time = 2500 + i * 600 + extra * 600;
-            tweenTo(r, 'position', target, time, backout(0.5), null, i === reels.length - 1 ? reelsComplete : null);
-        }
-    }
-    // Reels done handler.
-    function reelsComplete() {
-        running = false;
-    }
-    // Listen for animate update.
-    app.ticker.add(()=>{
-        // Update the slots.
-        for(let i = 0; i < reels.length; i++){
-            const r = reels[i];
-            // Update blur filter y amount based on speed.
-            // This would be better if calculated with time in mind also. Now blur depends on frame rate.
-            r.blur.blurY = (r.position - r.previousPosition) * 8;
-            r.previousPosition = r.position;
-            // Update symbol positions on reel.
-            for(let j = 0; j < r.symbols.length; j++){
-                const s = r.symbols[j];
-                const prevy = s.y;
-                s.y = (r.position + j) % r.symbols.length * SYMBOL_SIZE - SYMBOL_SIZE;
-                if (s.y < 0 && prevy > SYMBOL_SIZE) {
-                    // Detect going over and swap a texture.
-                    // This should in proper product be determined from some logical reel.
-                    s.texture = slotTextures[Math.floor(Math.random() * slotTextures.length)];
-                    s.scale.x = s.scale.y = Math.min(SYMBOL_SIZE / s.texture.width, SYMBOL_SIZE / s.texture.height);
-                    s.x = Math.round((SYMBOL_SIZE - s.width) / 2);
-                }
-            }
-        }
-    });
-    // Very simple tweening utility function. This should be replaced with a proper tweening library in a real product.
-    const tweening = [];
-    function tweenTo(object, property, target, time, easing, onchange, oncomplete) {
-        const tween = {
-            object,
-            property,
-            propertyBeginValue: object[property],
-            target,
-            easing,
-            time,
-            change: onchange,
-            complete: oncomplete,
-            start: Date.now()
-        };
-        tweening.push(tween);
-        return tween;
-    }
-    // Listen for animate update.
-    app.ticker.add(()=>{
-        const now = Date.now();
-        const remove = [];
-        for(let i = 0; i < tweening.length; i++){
-            const t = tweening[i];
-            const phase = Math.min(1, (now - t.start) / t.time);
-            t.object[t.property] = lerp(t.propertyBeginValue, t.target, t.easing(phase));
-            if (t.change) t.change(t);
-            if (phase === 1) {
-                t.object[t.property] = t.target;
-                if (t.complete) t.complete(t);
-                remove.push(t);
-            }
-        }
-        for(let i = 0; i < remove.length; i++)tweening.splice(tweening.indexOf(remove[i]), 1);
-    });
-    // Basic lerp funtion.
-    function lerp(a1, a2, t) {
-        return a1 * (1 - t) + a2 * t;
-    }
-    // Backout function from tweenjs.
-    // https://github.com/CreateJS/TweenJS/blob/master/src/tweenjs/Ease.js
-    function backout(amount) {
-        return (t)=>--t * t * ((amount + 1) * t + amount) + 1;
-    }
+    const reelConfig = {
+        reel: 5,
+        row: 3,
+        reelWidth: 100,
+        symbolSize: 100
+    };
+    const game = new (0, _game.Game)(app, reelConfig);
+    await game.init();
 })();
 
-},{"pixi.js":"1arn0"}],"1arn0":[function(require,module,exports,__globalThis) {
+},{"pixi.js":"1arn0","./game":"edeGs"}],"1arn0":[function(require,module,exports,__globalThis) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "ExtensionType", ()=>(0, _extensionsMjs.ExtensionType));
@@ -2043,7 +1861,7 @@ var _earcutDefault = parcelHelpers.interopDefault(_earcut);
 "use strict";
 (0, _extensionsMjs.extensions).add((0, _browserExtMjs.browserExt), (0, _webworkerExtMjs.webworkerExt));
 
-},{"./environment-browser/browserExt.mjs":"5UAxO","./environment-webworker/webworkerExt.mjs":"kKtPk","./extensions/Extensions.mjs":"hIU8N","./rendering/init.mjs":"5LgeC","./spritesheet/init.mjs":"7CauB","./accessibility/index.mjs":"7TdeF","./advanced-blend-modes/index.mjs":"9GWgN","./app/index.mjs":"7G1uu","./assets/index.mjs":"3Epg0","./color/index.mjs":"5E1Dz","./compressed-textures/index.mjs":"7pNY6","./culling/index.mjs":"8hFjp","./environment/index.mjs":"diEva","./environment-browser/index.mjs":"hEHgF","./environment-webworker/index.mjs":"junAY","./events/index.mjs":"jJMnv","./extensions/index.mjs":"ledaN","./filters/index.mjs":"5lDQe","./maths/index.mjs":"1X4VP","./prepare/index.mjs":"1fkUf","./rendering/index.mjs":"kuEPC","./scene/index.mjs":"7VPlp","./spritesheet/index.mjs":"hPE18","./ticker/index.mjs":"dsgvW","./utils/index.mjs":"3BJWi","./accessibility/AccessibilitySystem.mjs":false,"./accessibility/accessibilityTarget.mjs":false,"./advanced-blend-modes/ColorBlend.mjs":false,"./advanced-blend-modes/ColorBurnBlend.mjs":false,"./advanced-blend-modes/ColorDodgeBlend.mjs":false,"./advanced-blend-modes/DarkenBlend.mjs":false,"./advanced-blend-modes/DifferenceBlend.mjs":false,"./advanced-blend-modes/DivideBlend.mjs":false,"./advanced-blend-modes/ExclusionBlend.mjs":false,"./advanced-blend-modes/HardLightBlend.mjs":false,"./advanced-blend-modes/HardMixBlend.mjs":false,"./advanced-blend-modes/LightenBlend.mjs":false,"./advanced-blend-modes/LinearBurnBlend.mjs":false,"./advanced-blend-modes/LinearDodgeBlend.mjs":false,"./advanced-blend-modes/LinearLightBlend.mjs":false,"./advanced-blend-modes/LuminosityBlend.mjs":false,"./advanced-blend-modes/NegationBlend.mjs":false,"./advanced-blend-modes/OverlayBlend.mjs":false,"./advanced-blend-modes/PinLightBlend.mjs":false,"./advanced-blend-modes/SaturationBlend.mjs":false,"./advanced-blend-modes/SoftLightBlend.mjs":false,"./advanced-blend-modes/SubtractBlend.mjs":false,"./advanced-blend-modes/VividLightBlend.mjs":false,"./app/Application.mjs":"d2NiQ","./app/ResizePlugin.mjs":false,"./app/TickerPlugin.mjs":false,"./assets/Assets.mjs":"36Ja9","./assets/BackgroundLoader.mjs":false,"./assets/cache/Cache.mjs":false,"./assets/cache/parsers/cacheTextureArray.mjs":false,"./assets/detections/parsers/detectAvif.mjs":false,"./assets/detections/parsers/detectDefaults.mjs":false,"./assets/detections/parsers/detectMp4.mjs":false,"./assets/detections/parsers/detectOgv.mjs":false,"./assets/detections/parsers/detectWebm.mjs":false,"./assets/detections/parsers/detectWebp.mjs":false,"./assets/detections/utils/testImageFormat.mjs":false,"./assets/detections/utils/testVideoFormat.mjs":false,"./assets/loader/Loader.mjs":false,"./assets/loader/parsers/LoaderParser.mjs":false,"./assets/loader/parsers/loadJson.mjs":false,"./assets/loader/parsers/loadTxt.mjs":false,"./assets/loader/parsers/loadWebFont.mjs":false,"./assets/loader/parsers/textures/loadSVG.mjs":false,"./assets/loader/parsers/textures/loadTextures.mjs":false,"./assets/loader/parsers/textures/loadVideoTextures.mjs":false,"./assets/loader/parsers/textures/utils/createTexture.mjs":false,"./assets/loader/workers/WorkerManager.mjs":false,"./assets/resolver/parsers/resolveJsonUrl.mjs":false,"./assets/resolver/parsers/resolveTextureUrl.mjs":false,"./assets/resolver/Resolver.mjs":false,"./assets/utils/checkDataUrl.mjs":false,"./assets/utils/checkExtension.mjs":false,"./assets/utils/convertToList.mjs":false,"./assets/utils/copySearchParams.mjs":false,"./assets/utils/createStringVariations.mjs":false,"./assets/utils/isSingleItem.mjs":false,"./color/Color.mjs":"6wv14","./compressed-textures/basis/detectBasis.mjs":false,"./compressed-textures/basis/loadBasis.mjs":false,"./compressed-textures/basis/utils/createLevelBuffers.mjs":false,"./compressed-textures/basis/utils/gpuFormatToBasisTranscoderFormat.mjs":false,"./compressed-textures/basis/utils/setBasisTranscoderPath.mjs":false,"./compressed-textures/basis/worker/loadBasisOnWorker.mjs":false,"./compressed-textures/dds/const.mjs":false,"./compressed-textures/dds/loadDDS.mjs":false,"./compressed-textures/dds/parseDDS.mjs":false,"./compressed-textures/ktx/loadKTX.mjs":false,"./compressed-textures/ktx/parseKTX.mjs":false,"./compressed-textures/ktx2/const.mjs":false,"./compressed-textures/ktx2/loadKTX2.mjs":false,"./compressed-textures/ktx2/utils/convertFormatIfRequired.mjs":false,"./compressed-textures/ktx2/utils/createLevelBuffersFromKTX.mjs":false,"./compressed-textures/ktx2/utils/getTextureFormatFromKTXTexture.mjs":false,"./compressed-textures/ktx2/utils/glFormatToGPUFormat.mjs":false,"./compressed-textures/ktx2/utils/gpuFormatToKTXBasisTranscoderFormat.mjs":false,"./compressed-textures/ktx2/utils/setKTXTranscoderPath.mjs":false,"./compressed-textures/ktx2/utils/vkFormatToGPUFormat.mjs":false,"./compressed-textures/ktx2/worker/loadKTX2onWorker.mjs":false,"./compressed-textures/shared/detectCompressed.mjs":false,"./compressed-textures/shared/resolveCompressedTextureUrl.mjs":false,"./culling/Culler.mjs":false,"./culling/CullerPlugin.mjs":false,"./culling/cullingMixin.mjs":false,"./environment/adapter.mjs":false,"./environment/autoDetectEnvironment.mjs":false,"./environment-browser/BrowserAdapter.mjs":false,"./environment-webworker/WebWorkerAdapter.mjs":false,"./events/EventBoundary.mjs":false,"./events/EventSystem.mjs":false,"./events/EventTicker.mjs":false,"./events/FederatedEvent.mjs":false,"./events/FederatedEventTarget.mjs":false,"./events/FederatedMouseEvent.mjs":false,"./events/FederatedPointerEvent.mjs":false,"./events/FederatedWheelEvent.mjs":false,"./filters/blend-modes/blend-template.frag.mjs":false,"./filters/blend-modes/blend-template.vert.mjs":false,"./filters/blend-modes/blend-template.wgsl.mjs":false,"./filters/blend-modes/hsl.wgsl.mjs":false,"./filters/defaults/alpha/alpha.frag.mjs":false,"./filters/defaults/alpha/alpha.wgsl.mjs":false,"./filters/defaults/blur/gpu/blur-template.wgsl.mjs":false,"./filters/defaults/color-matrix/colorMatrixFilter.frag.mjs":false,"./filters/defaults/color-matrix/colorMatrixFilter.wgsl.mjs":false,"./filters/defaults/defaultFilter.vert.mjs":false,"./filters/defaults/displacement/displacement.frag.mjs":false,"./filters/defaults/displacement/displacement.vert.mjs":false,"./filters/defaults/displacement/displacement.wgsl.mjs":false,"./filters/defaults/noise/noise.frag.mjs":false,"./filters/defaults/noise/noise.wgsl.mjs":false,"./filters/mask/mask.frag.mjs":false,"./filters/mask/mask.vert.mjs":false,"./filters/mask/mask.wgsl.mjs":false,"./filters/blend-modes/BlendModeFilter.mjs":false,"./filters/blend-modes/hls/GLhls.mjs":false,"./filters/blend-modes/hls/GPUhls.mjs":false,"./filters/defaults/alpha/AlphaFilter.mjs":false,"./filters/defaults/blur/BlurFilter.mjs":"cklcD","./filters/defaults/blur/BlurFilterPass.mjs":false,"./filters/defaults/blur/const.mjs":false,"./filters/defaults/blur/gl/generateBlurFragSource.mjs":false,"./filters/defaults/blur/gl/generateBlurGlProgram.mjs":false,"./filters/defaults/blur/gl/generateBlurVertSource.mjs":false,"./filters/defaults/blur/gpu/generateBlurProgram.mjs":false,"./filters/defaults/color-matrix/ColorMatrixFilter.mjs":false,"./filters/defaults/displacement/DisplacementFilter.mjs":false,"./filters/defaults/noise/NoiseFilter.mjs":false,"./filters/Filter.mjs":false,"./filters/FilterEffect.mjs":false,"./filters/FilterPipe.mjs":false,"./filters/FilterSystem.mjs":false,"./filters/mask/MaskFilter.mjs":false,"./maths/matrix/groupD8.mjs":false,"./maths/matrix/Matrix.mjs":false,"./maths/misc/const.mjs":false,"./maths/misc/pow2.mjs":false,"./maths/misc/squaredDistanceToLineSegment.mjs":false,"./maths/point/ObservablePoint.mjs":false,"./maths/point/Point.mjs":false,"./maths/point/pointInTriangle.mjs":false,"./maths/shapes/Circle.mjs":false,"./maths/shapes/Ellipse.mjs":false,"./maths/shapes/Polygon.mjs":false,"./maths/shapes/Rectangle.mjs":false,"./maths/shapes/RoundedRectangle.mjs":false,"./maths/shapes/Triangle.mjs":false,"./prepare/PrepareBase.mjs":false,"./prepare/PrepareQueue.mjs":false,"./prepare/PrepareSystem.mjs":false,"./prepare/PrepareUpload.mjs":false,"./rendering/batcher/gl/GlBatchAdaptor.mjs":false,"./rendering/batcher/gl/utils/checkMaxIfStatementsInShader.mjs":false,"./rendering/batcher/gl/utils/maxRecommendedTextures.mjs":false,"./rendering/batcher/gpu/generateGPULayout.mjs":false,"./rendering/batcher/gpu/generateLayout.mjs":false,"./rendering/batcher/gpu/getTextureBatchBindGroup.mjs":false,"./rendering/batcher/gpu/GpuBatchAdaptor.mjs":false,"./rendering/batcher/shared/Batcher.mjs":false,"./rendering/batcher/shared/BatcherPipe.mjs":false,"./rendering/batcher/shared/BatchGeometry.mjs":false,"./rendering/batcher/shared/BatchTextureArray.mjs":false,"./rendering/batcher/shared/DefaultBatcher.mjs":false,"./rendering/batcher/shared/DefaultShader.mjs":false,"./rendering/high-shader/compileHighShaderToProgram.mjs":false,"./rendering/high-shader/compiler/compileHighShader.mjs":false,"./rendering/high-shader/compiler/utils/addBits.mjs":false,"./rendering/high-shader/compiler/utils/compileHooks.mjs":false,"./rendering/high-shader/compiler/utils/compileInputs.mjs":false,"./rendering/high-shader/compiler/utils/compileOutputs.mjs":false,"./rendering/high-shader/compiler/utils/formatShader.mjs":false,"./rendering/high-shader/compiler/utils/injectBits.mjs":false,"./rendering/high-shader/defaultProgramTemplate.mjs":false,"./rendering/high-shader/shader-bits/colorBit.mjs":false,"./rendering/high-shader/shader-bits/generateTextureBatchBit.mjs":false,"./rendering/high-shader/shader-bits/globalUniformsBit.mjs":false,"./rendering/high-shader/shader-bits/localUniformBit.mjs":false,"./rendering/high-shader/shader-bits/roundPixelsBit.mjs":false,"./rendering/high-shader/shader-bits/textureBit.mjs":false,"./rendering/mask/alpha/AlphaMask.mjs":false,"./rendering/mask/alpha/AlphaMaskPipe.mjs":false,"./rendering/mask/color/ColorMask.mjs":false,"./rendering/mask/color/ColorMaskPipe.mjs":false,"./rendering/mask/MaskEffectManager.mjs":false,"./rendering/mask/scissor/ScissorMask.mjs":false,"./rendering/mask/stencil/StencilMask.mjs":false,"./rendering/mask/stencil/StencilMaskPipe.mjs":false,"./rendering/mask/utils/addMaskBounds.mjs":false,"./rendering/mask/utils/addMaskLocalBounds.mjs":false,"./rendering/renderers/autoDetectRenderer.mjs":false,"./rendering/renderers/gl/buffer/const.mjs":false,"./rendering/renderers/gl/buffer/GlBuffer.mjs":false,"./rendering/renderers/gl/buffer/GlBufferSystem.mjs":false,"./rendering/renderers/gl/const.mjs":false,"./rendering/renderers/gl/context/GlContextSystem.mjs":false,"./rendering/renderers/gl/geometry/GlGeometrySystem.mjs":false,"./rendering/renderers/gl/geometry/utils/getGlTypeFromFormat.mjs":false,"./rendering/renderers/gl/GlBackBufferSystem.mjs":false,"./rendering/renderers/gl/GlColorMaskSystem.mjs":false,"./rendering/renderers/gl/GlEncoderSystem.mjs":false,"./rendering/renderers/gl/GlRenderTarget.mjs":false,"./rendering/renderers/gl/GlStencilSystem.mjs":false,"./rendering/renderers/gl/GlUboSystem.mjs":false,"./rendering/renderers/gl/renderTarget/GlRenderTargetAdaptor.mjs":false,"./rendering/renderers/gl/renderTarget/GlRenderTargetSystem.mjs":false,"./rendering/renderers/gl/shader/GenerateShaderSyncCode.mjs":false,"./rendering/renderers/gl/shader/getBatchSamplersUniformGroup.mjs":false,"./rendering/renderers/gl/shader/GlProgram.mjs":false,"./rendering/renderers/gl/shader/GlProgramData.mjs":false,"./rendering/renderers/gl/shader/GlShaderSystem.mjs":false,"./rendering/renderers/gl/shader/GlUniformGroupSystem.mjs":false,"./rendering/renderers/gl/shader/migrateFragmentFromV7toV8.mjs":false,"./rendering/renderers/gl/shader/program/compileShader.mjs":false,"./rendering/renderers/gl/shader/program/defaultValue.mjs":false,"./rendering/renderers/gl/shader/program/ensureAttributes.mjs":false,"./rendering/renderers/gl/shader/program/extractAttributesFromGlProgram.mjs":false,"./rendering/renderers/gl/shader/program/generateProgram.mjs":false,"./rendering/renderers/gl/shader/program/getMaxFragmentPrecision.mjs":false,"./rendering/renderers/gl/shader/program/getTestContext.mjs":false,"./rendering/renderers/gl/shader/program/getUboData.mjs":false,"./rendering/renderers/gl/shader/program/getUniformData.mjs":false,"./rendering/renderers/gl/shader/program/logProgramError.mjs":false,"./rendering/renderers/gl/shader/program/mapSize.mjs":false,"./rendering/renderers/gl/shader/program/mapType.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/addProgramDefines.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/ensurePrecision.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/insertVersion.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/setProgramName.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/stripVersion.mjs":false,"./rendering/renderers/gl/shader/utils/createUboElementsSTD40.mjs":false,"./rendering/renderers/gl/shader/utils/createUboSyncSTD40.mjs":false,"./rendering/renderers/gl/shader/utils/generateArraySyncSTD40.mjs":false,"./rendering/renderers/gl/shader/utils/generateUniformsSync.mjs":false,"./rendering/renderers/gl/shader/utils/generateUniformsSyncTypes.mjs":false,"./rendering/renderers/gl/state/GlStateSystem.mjs":false,"./rendering/renderers/gl/state/mapWebGLBlendModesToPixi.mjs":false,"./rendering/renderers/gl/texture/const.mjs":false,"./rendering/renderers/gl/texture/GlTexture.mjs":false,"./rendering/renderers/gl/texture/GlTextureSystem.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadBufferImageResource.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadCompressedTextureResource.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadImageResource.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadVideoResource.mjs":false,"./rendering/renderers/gl/texture/utils/applyStyleParams.mjs":false,"./rendering/renderers/gl/texture/utils/getSupportedGlCompressedTextureFormats.mjs":false,"./rendering/renderers/gl/texture/utils/mapFormatToGlFormat.mjs":false,"./rendering/renderers/gl/texture/utils/mapFormatToGlInternalFormat.mjs":false,"./rendering/renderers/gl/texture/utils/mapFormatToGlType.mjs":false,"./rendering/renderers/gl/texture/utils/pixiToGlMaps.mjs":false,"./rendering/renderers/gl/texture/utils/unpremultiplyAlpha.mjs":false,"./rendering/renderers/gl/WebGLRenderer.mjs":false,"./rendering/renderers/gpu/BindGroupSystem.mjs":false,"./rendering/renderers/gpu/buffer/GpuBufferSystem.mjs":false,"./rendering/renderers/gpu/buffer/GpuReadBuffer.mjs":false,"./rendering/renderers/gpu/buffer/UboBatch.mjs":false,"./rendering/renderers/gpu/GpuColorMaskSystem.mjs":false,"./rendering/renderers/gpu/GpuDeviceSystem.mjs":false,"./rendering/renderers/gpu/GpuEncoderSystem.mjs":false,"./rendering/renderers/gpu/GpuStencilSystem.mjs":false,"./rendering/renderers/gpu/GpuUboSystem.mjs":false,"./rendering/renderers/gpu/GpuUniformBatchPipe.mjs":false,"./rendering/renderers/gpu/pipeline/PipelineSystem.mjs":false,"./rendering/renderers/gpu/renderTarget/calculateProjection.mjs":false,"./rendering/renderers/gpu/renderTarget/GpuRenderTarget.mjs":false,"./rendering/renderers/gpu/renderTarget/GpuRenderTargetAdaptor.mjs":false,"./rendering/renderers/gpu/renderTarget/GpuRenderTargetSystem.mjs":false,"./rendering/renderers/gpu/shader/BindGroup.mjs":false,"./rendering/renderers/gpu/shader/GpuProgram.mjs":false,"./rendering/renderers/gpu/shader/GpuShaderSystem.mjs":false,"./rendering/renderers/gpu/shader/utils/createUboElementsWGSL.mjs":false,"./rendering/renderers/gpu/shader/utils/createUboSyncFunctionWGSL.mjs":false,"./rendering/renderers/gpu/shader/utils/extractAttributesFromGpuProgram.mjs":false,"./rendering/renderers/gpu/shader/utils/extractStructAndGroups.mjs":false,"./rendering/renderers/gpu/shader/utils/generateArraySyncWGSL.mjs":false,"./rendering/renderers/gpu/shader/utils/generateGpuLayoutGroups.mjs":false,"./rendering/renderers/gpu/shader/utils/generateLayoutHash.mjs":false,"./rendering/renderers/gpu/shader/utils/removeStructAndGroupDuplicates.mjs":false,"./rendering/renderers/gpu/state/GpuBlendModesToPixi.mjs":false,"./rendering/renderers/gpu/state/GpuStateSystem.mjs":false,"./rendering/renderers/gpu/state/GpuStencilModesToPixi.mjs":false,"./rendering/renderers/gpu/texture/GpuTextureSystem.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadBufferImageResource.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadCompressedTextureResource.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadImageSource.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadVideoSource.mjs":false,"./rendering/renderers/gpu/texture/utils/getSupportedGPUCompressedTextureFormats.mjs":false,"./rendering/renderers/gpu/texture/utils/GpuMipmapGenerator.mjs":false,"./rendering/renderers/gpu/WebGPURenderer.mjs":false,"./rendering/renderers/shared/background/BackgroundSystem.mjs":false,"./rendering/renderers/shared/blendModes/BlendModePipe.mjs":false,"./rendering/renderers/shared/buffer/Buffer.mjs":false,"./rendering/renderers/shared/buffer/BufferResource.mjs":false,"./rendering/renderers/shared/buffer/const.mjs":false,"./rendering/renderers/shared/buffer/utils/fastCopy.mjs":false,"./rendering/renderers/shared/extract/ExtractSystem.mjs":false,"./rendering/renderers/shared/extract/GenerateTextureSystem.mjs":false,"./rendering/renderers/shared/geometry/const.mjs":false,"./rendering/renderers/shared/geometry/Geometry.mjs":false,"./rendering/renderers/shared/geometry/utils/buildUvs.mjs":false,"./rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs":false,"./rendering/renderers/shared/geometry/utils/getAttributeInfoFromFormat.mjs":false,"./rendering/renderers/shared/geometry/utils/getGeometryBounds.mjs":false,"./rendering/renderers/shared/geometry/utils/transformVertices.mjs":false,"./rendering/renderers/shared/instructions/InstructionSet.mjs":false,"./rendering/renderers/shared/renderTarget/GlobalUniformSystem.mjs":false,"./rendering/renderers/shared/renderTarget/isRenderingToScreen.mjs":false,"./rendering/renderers/shared/renderTarget/RenderTarget.mjs":false,"./rendering/renderers/shared/renderTarget/RenderTargetSystem.mjs":false,"./rendering/renderers/shared/renderTarget/viewportFromFrame.mjs":false,"./rendering/renderers/shared/SchedulerSystem.mjs":false,"./rendering/renderers/shared/shader/const.mjs":false,"./rendering/renderers/shared/shader/Shader.mjs":false,"./rendering/renderers/shared/shader/types.mjs":false,"./rendering/renderers/shared/shader/UboSystem.mjs":false,"./rendering/renderers/shared/shader/UniformGroup.mjs":false,"./rendering/renderers/shared/shader/utils/createUboSyncFunction.mjs":false,"./rendering/renderers/shared/shader/utils/getDefaultUniformValue.mjs":false,"./rendering/renderers/shared/shader/utils/uboSyncFunctions.mjs":false,"./rendering/renderers/shared/shader/utils/uniformParsers.mjs":false,"./rendering/renderers/shared/startup/HelloSystem.mjs":false,"./rendering/renderers/shared/state/const.mjs":false,"./rendering/renderers/shared/state/getAdjustedBlendModeBlend.mjs":false,"./rendering/renderers/shared/state/State.mjs":false,"./rendering/renderers/shared/system/AbstractRenderer.mjs":false,"./rendering/renderers/shared/system/SharedSystems.mjs":false,"./rendering/renderers/shared/system/SystemRunner.mjs":false,"./rendering/renderers/shared/texture/CanvasPool.mjs":false,"./rendering/renderers/shared/texture/const.mjs":false,"./rendering/renderers/shared/texture/RenderableGCSystem.mjs":false,"./rendering/renderers/shared/texture/RenderTexture.mjs":false,"./rendering/renderers/shared/texture/sources/BufferImageSource.mjs":false,"./rendering/renderers/shared/texture/sources/CanvasSource.mjs":false,"./rendering/renderers/shared/texture/sources/CompressedSource.mjs":false,"./rendering/renderers/shared/texture/sources/ImageSource.mjs":false,"./rendering/renderers/shared/texture/sources/TextureSource.mjs":false,"./rendering/renderers/shared/texture/sources/VideoSource.mjs":false,"./rendering/renderers/shared/texture/Texture.mjs":"1LJTh","./rendering/renderers/shared/texture/TextureGCSystem.mjs":false,"./rendering/renderers/shared/texture/TextureMatrix.mjs":false,"./rendering/renderers/shared/texture/TexturePool.mjs":false,"./rendering/renderers/shared/texture/TextureStyle.mjs":false,"./rendering/renderers/shared/texture/TextureUvs.mjs":false,"./rendering/renderers/shared/texture/utils/generateUID.mjs":false,"./rendering/renderers/shared/texture/utils/getCanvasTexture.mjs":false,"./rendering/renderers/shared/texture/utils/getSupportedCompressedTextureFormats.mjs":false,"./rendering/renderers/shared/texture/utils/getSupportedTextureFormats.mjs":false,"./rendering/renderers/shared/texture/utils/textureFrom.mjs":"jvzE7","./rendering/renderers/shared/utils/createIdFromString.mjs":false,"./rendering/renderers/shared/utils/parseFunctionBody.mjs":false,"./rendering/renderers/shared/view/ViewSystem.mjs":false,"./rendering/renderers/types.mjs":false,"./scene/particle-container/shared/shader/particles.frag.mjs":false,"./scene/particle-container/shared/shader/particles.vert.mjs":false,"./scene/particle-container/shared/shader/particles.wgsl.mjs":false,"./scene/container/bounds/Bounds.mjs":false,"./scene/container/bounds/getFastGlobalBounds.mjs":false,"./scene/container/bounds/getGlobalBounds.mjs":false,"./scene/container/bounds/getLocalBounds.mjs":false,"./scene/container/bounds/getRenderableBounds.mjs":false,"./scene/container/bounds/utils/matrixAndBoundsPool.mjs":false,"./scene/container/container-mixins/cacheAsTextureMixin.mjs":false,"./scene/container/container-mixins/childrenHelperMixin.mjs":false,"./scene/container/container-mixins/collectRenderablesMixin.mjs":false,"./scene/container/container-mixins/effectsMixin.mjs":false,"./scene/container/container-mixins/findMixin.mjs":false,"./scene/container/container-mixins/getFastGlobalBoundsMixin.mjs":false,"./scene/container/container-mixins/getGlobalMixin.mjs":false,"./scene/container/container-mixins/measureMixin.mjs":false,"./scene/container/container-mixins/onRenderMixin.mjs":false,"./scene/container/container-mixins/sortMixin.mjs":false,"./scene/container/container-mixins/toLocalGlobalMixin.mjs":false,"./scene/container/Container.mjs":"cCEVU","./scene/container/CustomRenderPipe.mjs":false,"./scene/container/RenderContainer.mjs":false,"./scene/container/RenderGroup.mjs":false,"./scene/container/RenderGroupPipe.mjs":false,"./scene/container/RenderGroupSystem.mjs":false,"./scene/container/utils/assignWithIgnore.mjs":false,"./scene/container/utils/checkChildrenDidChange.mjs":false,"./scene/container/utils/clearList.mjs":false,"./scene/container/utils/collectAllRenderables.mjs":false,"./scene/container/utils/definedProps.mjs":false,"./scene/container/utils/executeInstructions.mjs":false,"./scene/container/utils/mixHexColors.mjs":false,"./scene/container/utils/multiplyColors.mjs":false,"./scene/container/utils/multiplyHexColors.mjs":false,"./scene/container/utils/updateLocalTransform.mjs":false,"./scene/container/utils/updateRenderGroupTransforms.mjs":false,"./scene/container/utils/updateWorldTransform.mjs":false,"./scene/container/utils/validateRenderables.mjs":false,"./scene/graphics/gl/GlGraphicsAdaptor.mjs":false,"./scene/graphics/gpu/colorToUniform.mjs":false,"./scene/graphics/gpu/GpuGraphicsAdaptor.mjs":false,"./scene/graphics/shared/BatchableGraphics.mjs":false,"./scene/graphics/shared/buildCommands/buildAdaptiveBezier.mjs":false,"./scene/graphics/shared/buildCommands/buildAdaptiveQuadratic.mjs":false,"./scene/graphics/shared/buildCommands/buildArc.mjs":false,"./scene/graphics/shared/buildCommands/buildArcTo.mjs":false,"./scene/graphics/shared/buildCommands/buildArcToSvg.mjs":false,"./scene/graphics/shared/buildCommands/buildCircle.mjs":false,"./scene/graphics/shared/buildCommands/buildLine.mjs":false,"./scene/graphics/shared/buildCommands/buildPixelLine.mjs":false,"./scene/graphics/shared/buildCommands/buildPolygon.mjs":false,"./scene/graphics/shared/buildCommands/buildRectangle.mjs":false,"./scene/graphics/shared/buildCommands/buildTriangle.mjs":false,"./scene/graphics/shared/const.mjs":false,"./scene/graphics/shared/fill/FillGradient.mjs":"djPae","./scene/graphics/shared/fill/FillPattern.mjs":false,"./scene/graphics/shared/Graphics.mjs":"gBLzd","./scene/graphics/shared/GraphicsContext.mjs":false,"./scene/graphics/shared/GraphicsContextSystem.mjs":false,"./scene/graphics/shared/GraphicsPipe.mjs":false,"./scene/graphics/shared/path/GraphicsPath.mjs":false,"./scene/graphics/shared/path/roundShape.mjs":false,"./scene/graphics/shared/path/ShapePath.mjs":false,"./scene/graphics/shared/svg/SVGParser.mjs":false,"./scene/graphics/shared/svg/SVGToGraphicsPath.mjs":false,"./scene/graphics/shared/utils/buildContextBatches.mjs":false,"./scene/graphics/shared/utils/buildGeometryFromPath.mjs":false,"./scene/graphics/shared/utils/convertFillInputToFillStyle.mjs":false,"./scene/graphics/shared/utils/getOrientationOfPoints.mjs":false,"./scene/graphics/shared/utils/triangulateWithHoles.mjs":false,"./scene/layers/RenderLayer.mjs":false,"./scene/mesh-perspective/PerspectiveMesh.mjs":false,"./scene/mesh-perspective/PerspectivePlaneGeometry.mjs":false,"./scene/mesh-perspective/utils/applyProjectiveTransformationToPlane.mjs":false,"./scene/mesh-perspective/utils/compute2DProjections.mjs":false,"./scene/mesh-plane/MeshPlane.mjs":false,"./scene/mesh-plane/PlaneGeometry.mjs":false,"./scene/mesh-simple/MeshRope.mjs":false,"./scene/mesh-simple/MeshSimple.mjs":false,"./scene/mesh-simple/RopeGeometry.mjs":false,"./scene/mesh/gl/GlMeshAdaptor.mjs":false,"./scene/mesh/gpu/GpuMeshAdapter.mjs":false,"./scene/mesh/shared/BatchableMesh.mjs":false,"./scene/mesh/shared/getTextureDefaultMatrix.mjs":false,"./scene/mesh/shared/Mesh.mjs":false,"./scene/mesh/shared/MeshGeometry.mjs":false,"./scene/mesh/shared/MeshPipe.mjs":false,"./scene/particle-container/gl/GlParticleContainerAdaptor.mjs":false,"./scene/particle-container/gpu/GpuParticleContainerAdaptor.mjs":false,"./scene/particle-container/shared/GlParticleContainerPipe.mjs":false,"./scene/particle-container/shared/GpuParticleContainerPipe.mjs":false,"./scene/particle-container/shared/Particle.mjs":false,"./scene/particle-container/shared/ParticleBuffer.mjs":false,"./scene/particle-container/shared/ParticleContainer.mjs":false,"./scene/particle-container/shared/ParticleContainerPipe.mjs":false,"./scene/particle-container/shared/particleData.mjs":false,"./scene/particle-container/shared/shader/ParticleShader.mjs":false,"./scene/particle-container/shared/utils/createIndicesForQuads.mjs":false,"./scene/particle-container/shared/utils/generateParticleUpdateFunction.mjs":false,"./scene/sprite-animated/AnimatedSprite.mjs":false,"./scene/sprite-nine-slice/NineSliceGeometry.mjs":false,"./scene/sprite-nine-slice/NineSliceSprite.mjs":false,"./scene/sprite-nine-slice/NineSliceSpritePipe.mjs":false,"./scene/sprite-tiling/shader/tilingBit.mjs":false,"./scene/sprite-tiling/shader/TilingSpriteShader.mjs":false,"./scene/sprite-tiling/TilingSprite.mjs":false,"./scene/sprite-tiling/TilingSpritePipe.mjs":false,"./scene/sprite-tiling/utils/applyMatrix.mjs":false,"./scene/sprite-tiling/utils/QuadGeometry.mjs":false,"./scene/sprite-tiling/utils/setPositions.mjs":false,"./scene/sprite-tiling/utils/setUvs.mjs":false,"./scene/sprite/BatchableSprite.mjs":false,"./scene/sprite/Sprite.mjs":"1d55h","./scene/sprite/SpritePipe.mjs":false,"./scene/text-bitmap/AbstractBitmapFont.mjs":false,"./scene/text-bitmap/asset/bitmapFontTextParser.mjs":false,"./scene/text-bitmap/asset/bitmapFontXMLParser.mjs":false,"./scene/text-bitmap/asset/bitmapFontXMLStringParser.mjs":false,"./scene/text-bitmap/asset/loadBitmapFont.mjs":false,"./scene/text-bitmap/BitmapFont.mjs":false,"./scene/text-bitmap/BitmapFontManager.mjs":false,"./scene/text-bitmap/BitmapText.mjs":false,"./scene/text-bitmap/BitmapTextPipe.mjs":false,"./scene/text-bitmap/DynamicBitmapFont.mjs":false,"./scene/text-bitmap/utils/getBitmapTextLayout.mjs":false,"./scene/text-bitmap/utils/resolveCharacters.mjs":false,"./scene/text-html/HTMLText.mjs":false,"./scene/text-html/HTMLTextPipe.mjs":false,"./scene/text-html/HTMLTextRenderData.mjs":false,"./scene/text-html/HTMLTextStyle.mjs":false,"./scene/text-html/HTMLTextSystem.mjs":false,"./scene/text-html/utils/extractFontFamilies.mjs":false,"./scene/text-html/utils/getFontCss.mjs":false,"./scene/text-html/utils/getSVGUrl.mjs":false,"./scene/text-html/utils/getTemporaryCanvasFromImage.mjs":false,"./scene/text-html/utils/loadFontAsBase64.mjs":false,"./scene/text-html/utils/loadFontCSS.mjs":false,"./scene/text-html/utils/loadSVGImage.mjs":false,"./scene/text-html/utils/measureHtmlText.mjs":false,"./scene/text-html/utils/textStyleToCSS.mjs":false,"./scene/text/AbstractText.mjs":false,"./scene/text/canvas/CanvasTextMetrics.mjs":false,"./scene/text/canvas/CanvasTextPipe.mjs":false,"./scene/text/canvas/CanvasTextSystem.mjs":false,"./scene/text/canvas/utils/fontStringFromTextStyle.mjs":false,"./scene/text/canvas/utils/getCanvasFillStyle.mjs":false,"./scene/text/sdfShader/SdfShader.mjs":false,"./scene/text/sdfShader/shader-bits/localUniformMSDFBit.mjs":false,"./scene/text/sdfShader/shader-bits/mSDFBit.mjs":false,"./scene/text/Text.mjs":"6PKey","./scene/text/TextStyle.mjs":"b0dUF","./scene/text/utils/ensureTextStyle.mjs":false,"./scene/text/utils/generateTextStyleKey.mjs":false,"./scene/text/utils/getPo2TextureFromSource.mjs":false,"./scene/text/utils/updateTextBounds.mjs":false,"./scene/view/ViewContainer.mjs":false,"./spritesheet/Spritesheet.mjs":false,"./spritesheet/spritesheetAsset.mjs":false,"./ticker/const.mjs":false,"./ticker/Ticker.mjs":false,"./ticker/TickerListener.mjs":false,"./utils/browser/detectVideoAlphaMode.mjs":false,"./utils/browser/isMobile.mjs":false,"./utils/browser/isSafari.mjs":false,"./utils/browser/isWebGLSupported.mjs":false,"./utils/browser/isWebGPUSupported.mjs":false,"./utils/browser/unsafeEvalSupported.mjs":false,"./utils/canvas/getCanvasBoundingBox.mjs":false,"./utils/const.mjs":false,"eventemitter3":"3fnfh","./utils/data/clean.mjs":false,"./utils/data/removeItems.mjs":false,"./utils/data/uid.mjs":false,"./utils/data/updateQuadBounds.mjs":false,"./utils/data/ViewableBuffer.mjs":false,"./utils/global/globalHooks.mjs":false,"./utils/logging/deprecation.mjs":false,"./utils/logging/logDebugTexture.mjs":false,"./utils/logging/logScene.mjs":false,"./utils/logging/warn.mjs":false,"./utils/misc/NOOP.mjs":false,"./utils/misc/Transform.mjs":false,"./utils/network/getResolutionOfUrl.mjs":false,"./utils/path.mjs":false,"./utils/pool/Pool.mjs":false,"./utils/pool/PoolGroup.mjs":false,"./utils/sayHello.mjs":false,"earcut":"dBYod","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5UAxO":[function(require,module,exports,__globalThis) {
+},{"./environment-browser/browserExt.mjs":"5UAxO","./environment-webworker/webworkerExt.mjs":"kKtPk","./extensions/Extensions.mjs":"hIU8N","./rendering/init.mjs":"5LgeC","./spritesheet/init.mjs":"7CauB","./accessibility/index.mjs":"7TdeF","./advanced-blend-modes/index.mjs":"9GWgN","./app/index.mjs":"7G1uu","./assets/index.mjs":"3Epg0","./color/index.mjs":"5E1Dz","./compressed-textures/index.mjs":"7pNY6","./culling/index.mjs":"8hFjp","./environment/index.mjs":"diEva","./environment-browser/index.mjs":"hEHgF","./environment-webworker/index.mjs":"junAY","./events/index.mjs":"jJMnv","./extensions/index.mjs":"ledaN","./filters/index.mjs":"5lDQe","./maths/index.mjs":"1X4VP","./prepare/index.mjs":"1fkUf","./rendering/index.mjs":"kuEPC","./scene/index.mjs":"7VPlp","./spritesheet/index.mjs":"hPE18","./ticker/index.mjs":"dsgvW","./utils/index.mjs":"3BJWi","./accessibility/AccessibilitySystem.mjs":false,"./accessibility/accessibilityTarget.mjs":false,"./advanced-blend-modes/ColorBlend.mjs":false,"./advanced-blend-modes/ColorBurnBlend.mjs":false,"./advanced-blend-modes/ColorDodgeBlend.mjs":false,"./advanced-blend-modes/DarkenBlend.mjs":false,"./advanced-blend-modes/DifferenceBlend.mjs":false,"./advanced-blend-modes/DivideBlend.mjs":false,"./advanced-blend-modes/ExclusionBlend.mjs":false,"./advanced-blend-modes/HardLightBlend.mjs":false,"./advanced-blend-modes/HardMixBlend.mjs":false,"./advanced-blend-modes/LightenBlend.mjs":false,"./advanced-blend-modes/LinearBurnBlend.mjs":false,"./advanced-blend-modes/LinearDodgeBlend.mjs":false,"./advanced-blend-modes/LinearLightBlend.mjs":false,"./advanced-blend-modes/LuminosityBlend.mjs":false,"./advanced-blend-modes/NegationBlend.mjs":false,"./advanced-blend-modes/OverlayBlend.mjs":false,"./advanced-blend-modes/PinLightBlend.mjs":false,"./advanced-blend-modes/SaturationBlend.mjs":false,"./advanced-blend-modes/SoftLightBlend.mjs":false,"./advanced-blend-modes/SubtractBlend.mjs":false,"./advanced-blend-modes/VividLightBlend.mjs":false,"./app/Application.mjs":"d2NiQ","./app/ResizePlugin.mjs":false,"./app/TickerPlugin.mjs":false,"./assets/Assets.mjs":"36Ja9","./assets/BackgroundLoader.mjs":false,"./assets/cache/Cache.mjs":false,"./assets/cache/parsers/cacheTextureArray.mjs":false,"./assets/detections/parsers/detectAvif.mjs":false,"./assets/detections/parsers/detectDefaults.mjs":false,"./assets/detections/parsers/detectMp4.mjs":false,"./assets/detections/parsers/detectOgv.mjs":false,"./assets/detections/parsers/detectWebm.mjs":false,"./assets/detections/parsers/detectWebp.mjs":false,"./assets/detections/utils/testImageFormat.mjs":false,"./assets/detections/utils/testVideoFormat.mjs":false,"./assets/loader/Loader.mjs":false,"./assets/loader/parsers/LoaderParser.mjs":false,"./assets/loader/parsers/loadJson.mjs":false,"./assets/loader/parsers/loadTxt.mjs":false,"./assets/loader/parsers/loadWebFont.mjs":false,"./assets/loader/parsers/textures/loadSVG.mjs":false,"./assets/loader/parsers/textures/loadTextures.mjs":false,"./assets/loader/parsers/textures/loadVideoTextures.mjs":false,"./assets/loader/parsers/textures/utils/createTexture.mjs":false,"./assets/loader/workers/WorkerManager.mjs":false,"./assets/resolver/parsers/resolveJsonUrl.mjs":false,"./assets/resolver/parsers/resolveTextureUrl.mjs":false,"./assets/resolver/Resolver.mjs":false,"./assets/utils/checkDataUrl.mjs":false,"./assets/utils/checkExtension.mjs":false,"./assets/utils/convertToList.mjs":false,"./assets/utils/copySearchParams.mjs":false,"./assets/utils/createStringVariations.mjs":false,"./assets/utils/isSingleItem.mjs":false,"./color/Color.mjs":false,"./compressed-textures/basis/detectBasis.mjs":false,"./compressed-textures/basis/loadBasis.mjs":false,"./compressed-textures/basis/utils/createLevelBuffers.mjs":false,"./compressed-textures/basis/utils/gpuFormatToBasisTranscoderFormat.mjs":false,"./compressed-textures/basis/utils/setBasisTranscoderPath.mjs":false,"./compressed-textures/basis/worker/loadBasisOnWorker.mjs":false,"./compressed-textures/dds/const.mjs":false,"./compressed-textures/dds/loadDDS.mjs":false,"./compressed-textures/dds/parseDDS.mjs":false,"./compressed-textures/ktx/loadKTX.mjs":false,"./compressed-textures/ktx/parseKTX.mjs":false,"./compressed-textures/ktx2/const.mjs":false,"./compressed-textures/ktx2/loadKTX2.mjs":false,"./compressed-textures/ktx2/utils/convertFormatIfRequired.mjs":false,"./compressed-textures/ktx2/utils/createLevelBuffersFromKTX.mjs":false,"./compressed-textures/ktx2/utils/getTextureFormatFromKTXTexture.mjs":false,"./compressed-textures/ktx2/utils/glFormatToGPUFormat.mjs":false,"./compressed-textures/ktx2/utils/gpuFormatToKTXBasisTranscoderFormat.mjs":false,"./compressed-textures/ktx2/utils/setKTXTranscoderPath.mjs":false,"./compressed-textures/ktx2/utils/vkFormatToGPUFormat.mjs":false,"./compressed-textures/ktx2/worker/loadKTX2onWorker.mjs":false,"./compressed-textures/shared/detectCompressed.mjs":false,"./compressed-textures/shared/resolveCompressedTextureUrl.mjs":false,"./culling/Culler.mjs":false,"./culling/CullerPlugin.mjs":false,"./culling/cullingMixin.mjs":false,"./environment/adapter.mjs":false,"./environment/autoDetectEnvironment.mjs":false,"./environment-browser/BrowserAdapter.mjs":false,"./environment-webworker/WebWorkerAdapter.mjs":false,"./events/EventBoundary.mjs":false,"./events/EventSystem.mjs":false,"./events/EventTicker.mjs":false,"./events/FederatedEvent.mjs":false,"./events/FederatedEventTarget.mjs":false,"./events/FederatedMouseEvent.mjs":false,"./events/FederatedPointerEvent.mjs":false,"./events/FederatedWheelEvent.mjs":false,"./filters/blend-modes/blend-template.frag.mjs":false,"./filters/blend-modes/blend-template.vert.mjs":false,"./filters/blend-modes/blend-template.wgsl.mjs":false,"./filters/blend-modes/hsl.wgsl.mjs":false,"./filters/defaults/alpha/alpha.frag.mjs":false,"./filters/defaults/alpha/alpha.wgsl.mjs":false,"./filters/defaults/blur/gpu/blur-template.wgsl.mjs":false,"./filters/defaults/color-matrix/colorMatrixFilter.frag.mjs":false,"./filters/defaults/color-matrix/colorMatrixFilter.wgsl.mjs":false,"./filters/defaults/defaultFilter.vert.mjs":false,"./filters/defaults/displacement/displacement.frag.mjs":false,"./filters/defaults/displacement/displacement.vert.mjs":false,"./filters/defaults/displacement/displacement.wgsl.mjs":false,"./filters/defaults/noise/noise.frag.mjs":false,"./filters/defaults/noise/noise.wgsl.mjs":false,"./filters/mask/mask.frag.mjs":false,"./filters/mask/mask.vert.mjs":false,"./filters/mask/mask.wgsl.mjs":false,"./filters/blend-modes/BlendModeFilter.mjs":false,"./filters/blend-modes/hls/GLhls.mjs":false,"./filters/blend-modes/hls/GPUhls.mjs":false,"./filters/defaults/alpha/AlphaFilter.mjs":false,"./filters/defaults/blur/BlurFilter.mjs":false,"./filters/defaults/blur/BlurFilterPass.mjs":false,"./filters/defaults/blur/const.mjs":false,"./filters/defaults/blur/gl/generateBlurFragSource.mjs":false,"./filters/defaults/blur/gl/generateBlurGlProgram.mjs":false,"./filters/defaults/blur/gl/generateBlurVertSource.mjs":false,"./filters/defaults/blur/gpu/generateBlurProgram.mjs":false,"./filters/defaults/color-matrix/ColorMatrixFilter.mjs":false,"./filters/defaults/displacement/DisplacementFilter.mjs":false,"./filters/defaults/noise/NoiseFilter.mjs":false,"./filters/Filter.mjs":false,"./filters/FilterEffect.mjs":false,"./filters/FilterPipe.mjs":false,"./filters/FilterSystem.mjs":false,"./filters/mask/MaskFilter.mjs":false,"./maths/matrix/groupD8.mjs":false,"./maths/matrix/Matrix.mjs":false,"./maths/misc/const.mjs":false,"./maths/misc/pow2.mjs":false,"./maths/misc/squaredDistanceToLineSegment.mjs":false,"./maths/point/ObservablePoint.mjs":false,"./maths/point/Point.mjs":false,"./maths/point/pointInTriangle.mjs":false,"./maths/shapes/Circle.mjs":false,"./maths/shapes/Ellipse.mjs":false,"./maths/shapes/Polygon.mjs":false,"./maths/shapes/Rectangle.mjs":false,"./maths/shapes/RoundedRectangle.mjs":false,"./maths/shapes/Triangle.mjs":false,"./prepare/PrepareBase.mjs":false,"./prepare/PrepareQueue.mjs":false,"./prepare/PrepareSystem.mjs":false,"./prepare/PrepareUpload.mjs":false,"./rendering/batcher/gl/GlBatchAdaptor.mjs":false,"./rendering/batcher/gl/utils/checkMaxIfStatementsInShader.mjs":false,"./rendering/batcher/gl/utils/maxRecommendedTextures.mjs":false,"./rendering/batcher/gpu/generateGPULayout.mjs":false,"./rendering/batcher/gpu/generateLayout.mjs":false,"./rendering/batcher/gpu/getTextureBatchBindGroup.mjs":false,"./rendering/batcher/gpu/GpuBatchAdaptor.mjs":false,"./rendering/batcher/shared/Batcher.mjs":false,"./rendering/batcher/shared/BatcherPipe.mjs":false,"./rendering/batcher/shared/BatchGeometry.mjs":false,"./rendering/batcher/shared/BatchTextureArray.mjs":false,"./rendering/batcher/shared/DefaultBatcher.mjs":false,"./rendering/batcher/shared/DefaultShader.mjs":false,"./rendering/high-shader/compileHighShaderToProgram.mjs":false,"./rendering/high-shader/compiler/compileHighShader.mjs":false,"./rendering/high-shader/compiler/utils/addBits.mjs":false,"./rendering/high-shader/compiler/utils/compileHooks.mjs":false,"./rendering/high-shader/compiler/utils/compileInputs.mjs":false,"./rendering/high-shader/compiler/utils/compileOutputs.mjs":false,"./rendering/high-shader/compiler/utils/formatShader.mjs":false,"./rendering/high-shader/compiler/utils/injectBits.mjs":false,"./rendering/high-shader/defaultProgramTemplate.mjs":false,"./rendering/high-shader/shader-bits/colorBit.mjs":false,"./rendering/high-shader/shader-bits/generateTextureBatchBit.mjs":false,"./rendering/high-shader/shader-bits/globalUniformsBit.mjs":false,"./rendering/high-shader/shader-bits/localUniformBit.mjs":false,"./rendering/high-shader/shader-bits/roundPixelsBit.mjs":false,"./rendering/high-shader/shader-bits/textureBit.mjs":false,"./rendering/mask/alpha/AlphaMask.mjs":false,"./rendering/mask/alpha/AlphaMaskPipe.mjs":false,"./rendering/mask/color/ColorMask.mjs":false,"./rendering/mask/color/ColorMaskPipe.mjs":false,"./rendering/mask/MaskEffectManager.mjs":false,"./rendering/mask/scissor/ScissorMask.mjs":false,"./rendering/mask/stencil/StencilMask.mjs":false,"./rendering/mask/stencil/StencilMaskPipe.mjs":false,"./rendering/mask/utils/addMaskBounds.mjs":false,"./rendering/mask/utils/addMaskLocalBounds.mjs":false,"./rendering/renderers/autoDetectRenderer.mjs":false,"./rendering/renderers/gl/buffer/const.mjs":false,"./rendering/renderers/gl/buffer/GlBuffer.mjs":false,"./rendering/renderers/gl/buffer/GlBufferSystem.mjs":false,"./rendering/renderers/gl/const.mjs":false,"./rendering/renderers/gl/context/GlContextSystem.mjs":false,"./rendering/renderers/gl/geometry/GlGeometrySystem.mjs":false,"./rendering/renderers/gl/geometry/utils/getGlTypeFromFormat.mjs":false,"./rendering/renderers/gl/GlBackBufferSystem.mjs":false,"./rendering/renderers/gl/GlColorMaskSystem.mjs":false,"./rendering/renderers/gl/GlEncoderSystem.mjs":false,"./rendering/renderers/gl/GlRenderTarget.mjs":false,"./rendering/renderers/gl/GlStencilSystem.mjs":false,"./rendering/renderers/gl/GlUboSystem.mjs":false,"./rendering/renderers/gl/renderTarget/GlRenderTargetAdaptor.mjs":false,"./rendering/renderers/gl/renderTarget/GlRenderTargetSystem.mjs":false,"./rendering/renderers/gl/shader/GenerateShaderSyncCode.mjs":false,"./rendering/renderers/gl/shader/getBatchSamplersUniformGroup.mjs":false,"./rendering/renderers/gl/shader/GlProgram.mjs":false,"./rendering/renderers/gl/shader/GlProgramData.mjs":false,"./rendering/renderers/gl/shader/GlShaderSystem.mjs":false,"./rendering/renderers/gl/shader/GlUniformGroupSystem.mjs":false,"./rendering/renderers/gl/shader/migrateFragmentFromV7toV8.mjs":false,"./rendering/renderers/gl/shader/program/compileShader.mjs":false,"./rendering/renderers/gl/shader/program/defaultValue.mjs":false,"./rendering/renderers/gl/shader/program/ensureAttributes.mjs":false,"./rendering/renderers/gl/shader/program/extractAttributesFromGlProgram.mjs":false,"./rendering/renderers/gl/shader/program/generateProgram.mjs":false,"./rendering/renderers/gl/shader/program/getMaxFragmentPrecision.mjs":false,"./rendering/renderers/gl/shader/program/getTestContext.mjs":false,"./rendering/renderers/gl/shader/program/getUboData.mjs":false,"./rendering/renderers/gl/shader/program/getUniformData.mjs":false,"./rendering/renderers/gl/shader/program/logProgramError.mjs":false,"./rendering/renderers/gl/shader/program/mapSize.mjs":false,"./rendering/renderers/gl/shader/program/mapType.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/addProgramDefines.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/ensurePrecision.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/insertVersion.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/setProgramName.mjs":false,"./rendering/renderers/gl/shader/program/preprocessors/stripVersion.mjs":false,"./rendering/renderers/gl/shader/utils/createUboElementsSTD40.mjs":false,"./rendering/renderers/gl/shader/utils/createUboSyncSTD40.mjs":false,"./rendering/renderers/gl/shader/utils/generateArraySyncSTD40.mjs":false,"./rendering/renderers/gl/shader/utils/generateUniformsSync.mjs":false,"./rendering/renderers/gl/shader/utils/generateUniformsSyncTypes.mjs":false,"./rendering/renderers/gl/state/GlStateSystem.mjs":false,"./rendering/renderers/gl/state/mapWebGLBlendModesToPixi.mjs":false,"./rendering/renderers/gl/texture/const.mjs":false,"./rendering/renderers/gl/texture/GlTexture.mjs":false,"./rendering/renderers/gl/texture/GlTextureSystem.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadBufferImageResource.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadCompressedTextureResource.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadImageResource.mjs":false,"./rendering/renderers/gl/texture/uploaders/glUploadVideoResource.mjs":false,"./rendering/renderers/gl/texture/utils/applyStyleParams.mjs":false,"./rendering/renderers/gl/texture/utils/getSupportedGlCompressedTextureFormats.mjs":false,"./rendering/renderers/gl/texture/utils/mapFormatToGlFormat.mjs":false,"./rendering/renderers/gl/texture/utils/mapFormatToGlInternalFormat.mjs":false,"./rendering/renderers/gl/texture/utils/mapFormatToGlType.mjs":false,"./rendering/renderers/gl/texture/utils/pixiToGlMaps.mjs":false,"./rendering/renderers/gl/texture/utils/unpremultiplyAlpha.mjs":false,"./rendering/renderers/gl/WebGLRenderer.mjs":false,"./rendering/renderers/gpu/BindGroupSystem.mjs":false,"./rendering/renderers/gpu/buffer/GpuBufferSystem.mjs":false,"./rendering/renderers/gpu/buffer/GpuReadBuffer.mjs":false,"./rendering/renderers/gpu/buffer/UboBatch.mjs":false,"./rendering/renderers/gpu/GpuColorMaskSystem.mjs":false,"./rendering/renderers/gpu/GpuDeviceSystem.mjs":false,"./rendering/renderers/gpu/GpuEncoderSystem.mjs":false,"./rendering/renderers/gpu/GpuStencilSystem.mjs":false,"./rendering/renderers/gpu/GpuUboSystem.mjs":false,"./rendering/renderers/gpu/GpuUniformBatchPipe.mjs":false,"./rendering/renderers/gpu/pipeline/PipelineSystem.mjs":false,"./rendering/renderers/gpu/renderTarget/calculateProjection.mjs":false,"./rendering/renderers/gpu/renderTarget/GpuRenderTarget.mjs":false,"./rendering/renderers/gpu/renderTarget/GpuRenderTargetAdaptor.mjs":false,"./rendering/renderers/gpu/renderTarget/GpuRenderTargetSystem.mjs":false,"./rendering/renderers/gpu/shader/BindGroup.mjs":false,"./rendering/renderers/gpu/shader/GpuProgram.mjs":false,"./rendering/renderers/gpu/shader/GpuShaderSystem.mjs":false,"./rendering/renderers/gpu/shader/utils/createUboElementsWGSL.mjs":false,"./rendering/renderers/gpu/shader/utils/createUboSyncFunctionWGSL.mjs":false,"./rendering/renderers/gpu/shader/utils/extractAttributesFromGpuProgram.mjs":false,"./rendering/renderers/gpu/shader/utils/extractStructAndGroups.mjs":false,"./rendering/renderers/gpu/shader/utils/generateArraySyncWGSL.mjs":false,"./rendering/renderers/gpu/shader/utils/generateGpuLayoutGroups.mjs":false,"./rendering/renderers/gpu/shader/utils/generateLayoutHash.mjs":false,"./rendering/renderers/gpu/shader/utils/removeStructAndGroupDuplicates.mjs":false,"./rendering/renderers/gpu/state/GpuBlendModesToPixi.mjs":false,"./rendering/renderers/gpu/state/GpuStateSystem.mjs":false,"./rendering/renderers/gpu/state/GpuStencilModesToPixi.mjs":false,"./rendering/renderers/gpu/texture/GpuTextureSystem.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadBufferImageResource.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadCompressedTextureResource.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadImageSource.mjs":false,"./rendering/renderers/gpu/texture/uploaders/gpuUploadVideoSource.mjs":false,"./rendering/renderers/gpu/texture/utils/getSupportedGPUCompressedTextureFormats.mjs":false,"./rendering/renderers/gpu/texture/utils/GpuMipmapGenerator.mjs":false,"./rendering/renderers/gpu/WebGPURenderer.mjs":false,"./rendering/renderers/shared/background/BackgroundSystem.mjs":false,"./rendering/renderers/shared/blendModes/BlendModePipe.mjs":false,"./rendering/renderers/shared/buffer/Buffer.mjs":false,"./rendering/renderers/shared/buffer/BufferResource.mjs":false,"./rendering/renderers/shared/buffer/const.mjs":false,"./rendering/renderers/shared/buffer/utils/fastCopy.mjs":false,"./rendering/renderers/shared/extract/ExtractSystem.mjs":false,"./rendering/renderers/shared/extract/GenerateTextureSystem.mjs":false,"./rendering/renderers/shared/geometry/const.mjs":false,"./rendering/renderers/shared/geometry/Geometry.mjs":false,"./rendering/renderers/shared/geometry/utils/buildUvs.mjs":false,"./rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs":false,"./rendering/renderers/shared/geometry/utils/getAttributeInfoFromFormat.mjs":false,"./rendering/renderers/shared/geometry/utils/getGeometryBounds.mjs":false,"./rendering/renderers/shared/geometry/utils/transformVertices.mjs":false,"./rendering/renderers/shared/instructions/InstructionSet.mjs":false,"./rendering/renderers/shared/renderTarget/GlobalUniformSystem.mjs":false,"./rendering/renderers/shared/renderTarget/isRenderingToScreen.mjs":false,"./rendering/renderers/shared/renderTarget/RenderTarget.mjs":false,"./rendering/renderers/shared/renderTarget/RenderTargetSystem.mjs":false,"./rendering/renderers/shared/renderTarget/viewportFromFrame.mjs":false,"./rendering/renderers/shared/SchedulerSystem.mjs":false,"./rendering/renderers/shared/shader/const.mjs":false,"./rendering/renderers/shared/shader/Shader.mjs":false,"./rendering/renderers/shared/shader/types.mjs":false,"./rendering/renderers/shared/shader/UboSystem.mjs":false,"./rendering/renderers/shared/shader/UniformGroup.mjs":false,"./rendering/renderers/shared/shader/utils/createUboSyncFunction.mjs":false,"./rendering/renderers/shared/shader/utils/getDefaultUniformValue.mjs":false,"./rendering/renderers/shared/shader/utils/uboSyncFunctions.mjs":false,"./rendering/renderers/shared/shader/utils/uniformParsers.mjs":false,"./rendering/renderers/shared/startup/HelloSystem.mjs":false,"./rendering/renderers/shared/state/const.mjs":false,"./rendering/renderers/shared/state/getAdjustedBlendModeBlend.mjs":false,"./rendering/renderers/shared/state/State.mjs":false,"./rendering/renderers/shared/system/AbstractRenderer.mjs":false,"./rendering/renderers/shared/system/SharedSystems.mjs":false,"./rendering/renderers/shared/system/SystemRunner.mjs":false,"./rendering/renderers/shared/texture/CanvasPool.mjs":false,"./rendering/renderers/shared/texture/const.mjs":false,"./rendering/renderers/shared/texture/RenderableGCSystem.mjs":false,"./rendering/renderers/shared/texture/RenderTexture.mjs":false,"./rendering/renderers/shared/texture/sources/BufferImageSource.mjs":false,"./rendering/renderers/shared/texture/sources/CanvasSource.mjs":false,"./rendering/renderers/shared/texture/sources/CompressedSource.mjs":false,"./rendering/renderers/shared/texture/sources/ImageSource.mjs":false,"./rendering/renderers/shared/texture/sources/TextureSource.mjs":false,"./rendering/renderers/shared/texture/sources/VideoSource.mjs":false,"./rendering/renderers/shared/texture/Texture.mjs":"1LJTh","./rendering/renderers/shared/texture/TextureGCSystem.mjs":false,"./rendering/renderers/shared/texture/TextureMatrix.mjs":false,"./rendering/renderers/shared/texture/TexturePool.mjs":false,"./rendering/renderers/shared/texture/TextureStyle.mjs":false,"./rendering/renderers/shared/texture/TextureUvs.mjs":false,"./rendering/renderers/shared/texture/utils/generateUID.mjs":false,"./rendering/renderers/shared/texture/utils/getCanvasTexture.mjs":false,"./rendering/renderers/shared/texture/utils/getSupportedCompressedTextureFormats.mjs":false,"./rendering/renderers/shared/texture/utils/getSupportedTextureFormats.mjs":false,"./rendering/renderers/shared/texture/utils/textureFrom.mjs":"jvzE7","./rendering/renderers/shared/utils/createIdFromString.mjs":false,"./rendering/renderers/shared/utils/parseFunctionBody.mjs":false,"./rendering/renderers/shared/view/ViewSystem.mjs":false,"./rendering/renderers/types.mjs":false,"./scene/particle-container/shared/shader/particles.frag.mjs":false,"./scene/particle-container/shared/shader/particles.vert.mjs":false,"./scene/particle-container/shared/shader/particles.wgsl.mjs":false,"./scene/container/bounds/Bounds.mjs":false,"./scene/container/bounds/getFastGlobalBounds.mjs":false,"./scene/container/bounds/getGlobalBounds.mjs":false,"./scene/container/bounds/getLocalBounds.mjs":false,"./scene/container/bounds/getRenderableBounds.mjs":false,"./scene/container/bounds/utils/matrixAndBoundsPool.mjs":false,"./scene/container/container-mixins/cacheAsTextureMixin.mjs":false,"./scene/container/container-mixins/childrenHelperMixin.mjs":false,"./scene/container/container-mixins/collectRenderablesMixin.mjs":false,"./scene/container/container-mixins/effectsMixin.mjs":false,"./scene/container/container-mixins/findMixin.mjs":false,"./scene/container/container-mixins/getFastGlobalBoundsMixin.mjs":false,"./scene/container/container-mixins/getGlobalMixin.mjs":false,"./scene/container/container-mixins/measureMixin.mjs":false,"./scene/container/container-mixins/onRenderMixin.mjs":false,"./scene/container/container-mixins/sortMixin.mjs":false,"./scene/container/container-mixins/toLocalGlobalMixin.mjs":false,"./scene/container/Container.mjs":"cCEVU","./scene/container/CustomRenderPipe.mjs":false,"./scene/container/RenderContainer.mjs":false,"./scene/container/RenderGroup.mjs":false,"./scene/container/RenderGroupPipe.mjs":false,"./scene/container/RenderGroupSystem.mjs":false,"./scene/container/utils/assignWithIgnore.mjs":false,"./scene/container/utils/checkChildrenDidChange.mjs":false,"./scene/container/utils/clearList.mjs":false,"./scene/container/utils/collectAllRenderables.mjs":false,"./scene/container/utils/definedProps.mjs":false,"./scene/container/utils/executeInstructions.mjs":false,"./scene/container/utils/mixHexColors.mjs":false,"./scene/container/utils/multiplyColors.mjs":false,"./scene/container/utils/multiplyHexColors.mjs":false,"./scene/container/utils/updateLocalTransform.mjs":false,"./scene/container/utils/updateRenderGroupTransforms.mjs":false,"./scene/container/utils/updateWorldTransform.mjs":false,"./scene/container/utils/validateRenderables.mjs":false,"./scene/graphics/gl/GlGraphicsAdaptor.mjs":false,"./scene/graphics/gpu/colorToUniform.mjs":false,"./scene/graphics/gpu/GpuGraphicsAdaptor.mjs":false,"./scene/graphics/shared/BatchableGraphics.mjs":false,"./scene/graphics/shared/buildCommands/buildAdaptiveBezier.mjs":false,"./scene/graphics/shared/buildCommands/buildAdaptiveQuadratic.mjs":false,"./scene/graphics/shared/buildCommands/buildArc.mjs":false,"./scene/graphics/shared/buildCommands/buildArcTo.mjs":false,"./scene/graphics/shared/buildCommands/buildArcToSvg.mjs":false,"./scene/graphics/shared/buildCommands/buildCircle.mjs":false,"./scene/graphics/shared/buildCommands/buildLine.mjs":false,"./scene/graphics/shared/buildCommands/buildPixelLine.mjs":false,"./scene/graphics/shared/buildCommands/buildPolygon.mjs":false,"./scene/graphics/shared/buildCommands/buildRectangle.mjs":false,"./scene/graphics/shared/buildCommands/buildTriangle.mjs":false,"./scene/graphics/shared/const.mjs":false,"./scene/graphics/shared/fill/FillGradient.mjs":false,"./scene/graphics/shared/fill/FillPattern.mjs":false,"./scene/graphics/shared/Graphics.mjs":"gBLzd","./scene/graphics/shared/GraphicsContext.mjs":false,"./scene/graphics/shared/GraphicsContextSystem.mjs":false,"./scene/graphics/shared/GraphicsPipe.mjs":false,"./scene/graphics/shared/path/GraphicsPath.mjs":false,"./scene/graphics/shared/path/roundShape.mjs":false,"./scene/graphics/shared/path/ShapePath.mjs":false,"./scene/graphics/shared/svg/SVGParser.mjs":false,"./scene/graphics/shared/svg/SVGToGraphicsPath.mjs":false,"./scene/graphics/shared/utils/buildContextBatches.mjs":false,"./scene/graphics/shared/utils/buildGeometryFromPath.mjs":false,"./scene/graphics/shared/utils/convertFillInputToFillStyle.mjs":false,"./scene/graphics/shared/utils/getOrientationOfPoints.mjs":false,"./scene/graphics/shared/utils/triangulateWithHoles.mjs":false,"./scene/layers/RenderLayer.mjs":false,"./scene/mesh-perspective/PerspectiveMesh.mjs":false,"./scene/mesh-perspective/PerspectivePlaneGeometry.mjs":false,"./scene/mesh-perspective/utils/applyProjectiveTransformationToPlane.mjs":false,"./scene/mesh-perspective/utils/compute2DProjections.mjs":false,"./scene/mesh-plane/MeshPlane.mjs":false,"./scene/mesh-plane/PlaneGeometry.mjs":false,"./scene/mesh-simple/MeshRope.mjs":false,"./scene/mesh-simple/MeshSimple.mjs":false,"./scene/mesh-simple/RopeGeometry.mjs":false,"./scene/mesh/gl/GlMeshAdaptor.mjs":false,"./scene/mesh/gpu/GpuMeshAdapter.mjs":false,"./scene/mesh/shared/BatchableMesh.mjs":false,"./scene/mesh/shared/getTextureDefaultMatrix.mjs":false,"./scene/mesh/shared/Mesh.mjs":false,"./scene/mesh/shared/MeshGeometry.mjs":false,"./scene/mesh/shared/MeshPipe.mjs":false,"./scene/particle-container/gl/GlParticleContainerAdaptor.mjs":false,"./scene/particle-container/gpu/GpuParticleContainerAdaptor.mjs":false,"./scene/particle-container/shared/GlParticleContainerPipe.mjs":false,"./scene/particle-container/shared/GpuParticleContainerPipe.mjs":false,"./scene/particle-container/shared/Particle.mjs":false,"./scene/particle-container/shared/ParticleBuffer.mjs":false,"./scene/particle-container/shared/ParticleContainer.mjs":false,"./scene/particle-container/shared/ParticleContainerPipe.mjs":false,"./scene/particle-container/shared/particleData.mjs":false,"./scene/particle-container/shared/shader/ParticleShader.mjs":false,"./scene/particle-container/shared/utils/createIndicesForQuads.mjs":false,"./scene/particle-container/shared/utils/generateParticleUpdateFunction.mjs":false,"./scene/sprite-animated/AnimatedSprite.mjs":false,"./scene/sprite-nine-slice/NineSliceGeometry.mjs":false,"./scene/sprite-nine-slice/NineSliceSprite.mjs":false,"./scene/sprite-nine-slice/NineSliceSpritePipe.mjs":false,"./scene/sprite-tiling/shader/tilingBit.mjs":false,"./scene/sprite-tiling/shader/TilingSpriteShader.mjs":false,"./scene/sprite-tiling/TilingSprite.mjs":false,"./scene/sprite-tiling/TilingSpritePipe.mjs":false,"./scene/sprite-tiling/utils/applyMatrix.mjs":false,"./scene/sprite-tiling/utils/QuadGeometry.mjs":false,"./scene/sprite-tiling/utils/setPositions.mjs":false,"./scene/sprite-tiling/utils/setUvs.mjs":false,"./scene/sprite/BatchableSprite.mjs":false,"./scene/sprite/Sprite.mjs":"1d55h","./scene/sprite/SpritePipe.mjs":false,"./scene/text-bitmap/AbstractBitmapFont.mjs":false,"./scene/text-bitmap/asset/bitmapFontTextParser.mjs":false,"./scene/text-bitmap/asset/bitmapFontXMLParser.mjs":false,"./scene/text-bitmap/asset/bitmapFontXMLStringParser.mjs":false,"./scene/text-bitmap/asset/loadBitmapFont.mjs":false,"./scene/text-bitmap/BitmapFont.mjs":false,"./scene/text-bitmap/BitmapFontManager.mjs":false,"./scene/text-bitmap/BitmapText.mjs":false,"./scene/text-bitmap/BitmapTextPipe.mjs":false,"./scene/text-bitmap/DynamicBitmapFont.mjs":false,"./scene/text-bitmap/utils/getBitmapTextLayout.mjs":false,"./scene/text-bitmap/utils/resolveCharacters.mjs":false,"./scene/text-html/HTMLText.mjs":false,"./scene/text-html/HTMLTextPipe.mjs":false,"./scene/text-html/HTMLTextRenderData.mjs":false,"./scene/text-html/HTMLTextStyle.mjs":false,"./scene/text-html/HTMLTextSystem.mjs":false,"./scene/text-html/utils/extractFontFamilies.mjs":false,"./scene/text-html/utils/getFontCss.mjs":false,"./scene/text-html/utils/getSVGUrl.mjs":false,"./scene/text-html/utils/getTemporaryCanvasFromImage.mjs":false,"./scene/text-html/utils/loadFontAsBase64.mjs":false,"./scene/text-html/utils/loadFontCSS.mjs":false,"./scene/text-html/utils/loadSVGImage.mjs":false,"./scene/text-html/utils/measureHtmlText.mjs":false,"./scene/text-html/utils/textStyleToCSS.mjs":false,"./scene/text/AbstractText.mjs":false,"./scene/text/canvas/CanvasTextMetrics.mjs":false,"./scene/text/canvas/CanvasTextPipe.mjs":false,"./scene/text/canvas/CanvasTextSystem.mjs":false,"./scene/text/canvas/utils/fontStringFromTextStyle.mjs":false,"./scene/text/canvas/utils/getCanvasFillStyle.mjs":false,"./scene/text/sdfShader/SdfShader.mjs":false,"./scene/text/sdfShader/shader-bits/localUniformMSDFBit.mjs":false,"./scene/text/sdfShader/shader-bits/mSDFBit.mjs":false,"./scene/text/Text.mjs":"6PKey","./scene/text/TextStyle.mjs":"b0dUF","./scene/text/utils/ensureTextStyle.mjs":false,"./scene/text/utils/generateTextStyleKey.mjs":false,"./scene/text/utils/getPo2TextureFromSource.mjs":false,"./scene/text/utils/updateTextBounds.mjs":false,"./scene/view/ViewContainer.mjs":false,"./spritesheet/Spritesheet.mjs":false,"./spritesheet/spritesheetAsset.mjs":false,"./ticker/const.mjs":false,"./ticker/Ticker.mjs":false,"./ticker/TickerListener.mjs":false,"./utils/browser/detectVideoAlphaMode.mjs":false,"./utils/browser/isMobile.mjs":false,"./utils/browser/isSafari.mjs":false,"./utils/browser/isWebGLSupported.mjs":false,"./utils/browser/isWebGPUSupported.mjs":false,"./utils/browser/unsafeEvalSupported.mjs":false,"./utils/canvas/getCanvasBoundingBox.mjs":false,"./utils/const.mjs":false,"eventemitter3":"3fnfh","./utils/data/clean.mjs":false,"./utils/data/removeItems.mjs":false,"./utils/data/uid.mjs":false,"./utils/data/updateQuadBounds.mjs":false,"./utils/data/ViewableBuffer.mjs":false,"./utils/global/globalHooks.mjs":false,"./utils/logging/deprecation.mjs":false,"./utils/logging/logDebugTexture.mjs":false,"./utils/logging/logScene.mjs":false,"./utils/logging/warn.mjs":false,"./utils/misc/NOOP.mjs":false,"./utils/misc/Transform.mjs":false,"./utils/network/getResolutionOfUrl.mjs":false,"./utils/path.mjs":false,"./utils/pool/Pool.mjs":false,"./utils/pool/PoolGroup.mjs":false,"./utils/sayHello.mjs":false,"earcut":"dBYod","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5UAxO":[function(require,module,exports,__globalThis) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "browserExt", ()=>browserExt);
@@ -52392,6 +52210,297 @@ function logRenderGroupScene(renderGroup, depth = 0, data = {
 },{"../../scene/sprite/Sprite.mjs":"1d55h","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7gCTg":[function(require,module,exports,__globalThis) {
 "use strict";
 
-},{}]},["9mu7C","8lqZg"], "8lqZg", "parcelRequire94c2")
+},{}],"edeGs":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Game", ()=>Game);
+var _reelManager = require("./reelManager");
+var _resourceManager = require("./resourceManager");
+var _symbolManager = require("./symbolManager");
+var _uiManager = require("./uiManager");
+class Game {
+    constructor(pixiApp, reelConfig){
+        this._isRunning = false;
+        this._resourceManager = new (0, _resourceManager.ResourceManager)();
+        this._symbolManager = new (0, _symbolManager.SymbolManager)();
+        this._reelManager = new (0, _reelManager.ReelManager)(reelConfig, pixiApp, this._symbolManager);
+        this._uiManager = new (0, _uiManager.UIManager)(pixiApp);
+    }
+    async init() {
+        await this._resourceManager.init();
+        this._reelManager.init();
+        // add callback for spin
+        this._uiManager.init(()=>{
+            if (this._isRunning) return;
+            this._isRunning = true;
+            this._reelManager.start(()=>this._isRunning = false);
+        });
+    }
+}
+
+},{"./resourceManager":"8roE0","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./reelManager":"5wDG2","./symbolManager":"iPwF3","./uiManager":"jn6GH"}],"8roE0":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "getTextureByName", ()=>getTextureByName);
+parcelHelpers.export(exports, "ResourceManager", ()=>ResourceManager);
+var _pixiJs = require("pixi.js");
+var _symbolManager = require("./symbolManager");
+function getTextureByName(name, connect = false) {
+    return `./${name}${connect ? '_connect' : ''}.png`;
+}
+class ResourceManager {
+    async init() {
+        let assetsNames = [];
+        Object.values((0, _symbolManager.symbolMap)).forEach((symbolName)=>{
+            assetsNames.push(getTextureByName(symbolName), getTextureByName(symbolName, true));
+        });
+        return await (0, _pixiJs.Assets).load(assetsNames);
+    }
+}
+
+},{"pixi.js":"1arn0","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./symbolManager":"iPwF3"}],"iPwF3":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "symbolMap", ()=>symbolMap);
+parcelHelpers.export(exports, "SymbolManager", ()=>SymbolManager);
+var _symbol = require("./symbol");
+const symbolMap = {
+    0: '9',
+    1: '10',
+    2: 'J',
+    3: 'Q',
+    4: 'K',
+    5: 'A',
+    6: 'M1',
+    7: 'M2',
+    8: 'M3',
+    9: 'M4',
+    10: 'M5',
+    11: 'H1',
+    12: 'H2',
+    13: 'H3',
+    14: 'H4',
+    15: 'H5'
+};
+class SymbolManager {
+    constructor(){}
+    createSymbol(symbolId) {
+        return new (0, _symbol.Symbol)(symbolId);
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./symbol":"4nRSd"}],"4nRSd":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Symbol", ()=>Symbol);
+var _pixiJs = require("pixi.js");
+var _resourceManager = require("./resourceManager");
+var _symbolManager = require("./symbolManager");
+class Symbol {
+    constructor(_id){
+        this._id = _id;
+        this._mainTexture = new (0, _pixiJs.Texture)();
+        this._winTexture = new (0, _pixiJs.Texture)();
+        this._sprite = new (0, _pixiJs.Sprite)();
+        this._container = new (0, _pixiJs.Container)();
+        this.initTextures();
+    }
+    get container() {
+        return this._container;
+    }
+    get x() {
+        return this._container.x;
+    }
+    get y() {
+        return this._container.y;
+    }
+    set x(x) {
+        this._container.x = x;
+    }
+    set y(y) {
+        this._container.y = y;
+    }
+    setSymbol(symbolId) {
+        this._id = symbolId;
+        this.setTextures();
+    }
+    win() {
+        this._sprite.texture = this._winTexture;
+    }
+    stop() {
+        this._sprite.texture = this._mainTexture;
+    }
+    initTextures() {
+        this.setTextures();
+        this._sprite.anchor = 0.5;
+        this._container.addChild(this._sprite);
+        this._container.scale = 0.5;
+    }
+    setTextures() {
+        const symbolName = (0, _symbolManager.symbolMap)[this._id];
+        this._mainTexture = (0, _pixiJs.Texture).from((0, _resourceManager.getTextureByName)(symbolName));
+        this._winTexture = (0, _pixiJs.Texture).from((0, _resourceManager.getTextureByName)(symbolName, true));
+        this._sprite.texture = this._mainTexture;
+    }
+}
+
+},{"pixi.js":"1arn0","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./resourceManager":"8roE0","./symbolManager":"iPwF3"}],"5wDG2":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "ReelManager", ()=>ReelManager);
+var _pixiJs = require("pixi.js");
+var _symbolManager = require("./symbolManager");
+class ReelManager {
+    constructor(_reelConfig, _pixiApp, _symbolManager){
+        this._reelConfig = _reelConfig;
+        this._pixiApp = _pixiApp;
+        this._symbolManager = _symbolManager;
+        this._reels = [];
+        this._tweening = [];
+    }
+    init() {
+        this.initReels();
+        this.initTicker();
+    }
+    start(endCallback) {
+        for(let i = 0; i < this._reels.length; i++){
+            const reel = this._reels[i];
+            const target = reel.position + 10 + i * 5;
+            const time = 1000 + i * 300;
+            this.tweenTo(reel, reel.position, target, time, backout(0.5), i === this._reelConfig.reel - 1 ? ()=>{
+                endCallback();
+            } : null);
+        }
+    }
+    initReels() {
+        // Build the reels
+        const reelsContainer = new (0, _pixiJs.Container)();
+        for(let i = 0; i < this._reelConfig.reel; i++){
+            const reelContainer = new (0, _pixiJs.Container)();
+            reelContainer.x = i * this._reelConfig.reelWidth;
+            reelContainer.y = this._reelConfig.symbolSize;
+            reelsContainer.addChild(reelContainer);
+            const reel = {
+                symbols: [],
+                container: reelContainer,
+                position: 0
+            };
+            // Build the symbols, last row is bumper symbol
+            for(let j = 0; j < this._reelConfig.row + 1; j++){
+                const randomSymbolId = getRandomSymbolId();
+                const symbol = this._symbolManager.createSymbol(randomSymbolId);
+                symbol.y = j * this._reelConfig.symbolSize;
+                reelContainer.addChild(symbol.container);
+                reel.symbols.push(symbol);
+            }
+            this._reels.push(reel);
+        }
+        this._pixiApp.stage.addChild(reelsContainer);
+        const marginTop = 200;
+        const reelsWidth = this._reelConfig.reelWidth * this._reelConfig.reel;
+        reelsContainer.y = marginTop - this._reelConfig.symbolSize / 2;
+        reelsContainer.x = this._pixiApp.screen.width / 2 - reelsWidth / 2 + this._reelConfig.symbolSize / 2;
+    }
+    initTicker() {
+        // Listen for animate update.
+        this._pixiApp.ticker.add(()=>{
+            // reel tweener
+            const now = Date.now();
+            const remove = [];
+            for(let i = 0; i < this._tweening.length; i++){
+                const tween = this._tweening[i];
+                const phase = Math.min(1, (now - tween.start) / tween.time);
+                tween.reel.position = lerp(tween.value, tween.target, tween.easing(phase));
+                if (phase === 1) {
+                    tween.reel.position = tween.target;
+                    if (tween.complete) tween.complete(tween);
+                    remove.push(tween);
+                }
+            }
+            for(let i = 0; i < remove.length; i++)this._tweening.splice(this._tweening.indexOf(remove[i]), 1);
+            // Update the slots.
+            for(let i = 0; i < this._reels.length; i++){
+                const reel = this._reels[i];
+                // Update symbol positions on reel.
+                for(let j = 0; j < reel.symbols.length; j++){
+                    const symbol = reel.symbols[j];
+                    const prevy = symbol.y;
+                    symbol.y = (reel.position + j) % reel.symbols.length * this._reelConfig.symbolSize - this._reelConfig.symbolSize;
+                    if (symbol.y < 0 && prevy > this._reelConfig.symbolSize) symbol.setSymbol(getRandomSymbolId());
+                }
+            }
+        });
+    }
+    tweenTo(reel, value, target, time, easing, oncomplete) {
+        const tween = {
+            reel,
+            value,
+            target,
+            easing,
+            time,
+            complete: oncomplete,
+            start: Date.now()
+        };
+        this._tweening.push(tween);
+    }
+}
+// Basic lerp funtion.
+function lerp(a1, a2, t) {
+    return a1 * (1 - t) + a2 * t;
+}
+// Backout function from tweenjs.
+// https://github.com/CreateJS/TweenJS/blob/master/src/tweenjs/Ease.js
+function backout(amount) {
+    return (t)=>--t * t * ((amount + 1) * t + amount) + 1;
+}
+function getRandomSymbolId() {
+    return Math.floor(Math.random() * Object.keys((0, _symbolManager.symbolMap)).length);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","pixi.js":"1arn0","./symbolManager":"iPwF3"}],"jn6GH":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "UIManager", ()=>UIManager);
+var _pixiJs = require("pixi.js");
+class UIManager {
+    constructor(_pixiApp){
+        this._pixiApp = _pixiApp;
+    }
+    init(spinCallback) {
+        const marginTop = 200;
+        const top = new (0, _pixiJs.Graphics)().rect(0, 0, this._pixiApp.screen.width, marginTop).fill({
+            color: 0x0
+        });
+        const bottom = new (0, _pixiJs.Graphics)().rect(0, 0, this._pixiApp.screen.width, marginTop).fill({
+            color: 0x0
+        });
+        bottom.y = 500;
+        this._pixiApp.stage.addChild(top);
+        this._pixiApp.stage.addChild(bottom);
+        const style = new (0, _pixiJs.TextStyle)({
+            fontFamily: 'Arial',
+            fontSize: 36,
+            fontWeight: 'bold',
+            fill: 0xffffff
+        });
+        // Header
+        const headerText = new (0, _pixiJs.Text)('AvatarUX Test', style);
+        headerText.x = Math.round((top.width - headerText.width) / 2);
+        headerText.y = Math.round((marginTop - headerText.height) / 2);
+        top.addChild(headerText);
+        // Spin Button
+        const playText = new (0, _pixiJs.Text)('Spin', style);
+        playText.x = Math.round((bottom.width - playText.width) / 2);
+        playText.y = 20;
+        bottom.addChild(playText);
+        bottom.eventMode = 'static';
+        bottom.cursor = 'pointer';
+        bottom.addListener('pointerdown', ()=>{
+            spinCallback();
+        });
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","pixi.js":"1arn0"}]},["9mu7C","8lqZg"], "8lqZg", "parcelRequire94c2")
 
 //# sourceMappingURL=index.975ef6c8.js.map
