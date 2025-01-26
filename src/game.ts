@@ -4,20 +4,21 @@ import { ResourceManager } from "./resourceManager";
 import { ReelConfig } from "./types";
 import { SymbolManager } from "./symbolManager";
 import { UIManager } from "./uiManager";
+import { WinManager } from "./winManager";
 
 export class Game {
     protected _resourceManager: ResourceManager;
     protected _symbolManager: SymbolManager;
     protected _reelManager: ReelManager;
     protected _uiManager: UIManager;
-
-    protected _isRunning: boolean = false;
+    protected _winManager: WinManager;
 
     constructor(pixiApp: Application, reelConfig: ReelConfig) {
         this._resourceManager = new ResourceManager();
         this._symbolManager = new SymbolManager();
         this._reelManager = new ReelManager(reelConfig, pixiApp, this._symbolManager);
-        this._uiManager = new UIManager(pixiApp);
+        this._uiManager = new UIManager(reelConfig, pixiApp);
+        this._winManager = new WinManager(pixiApp);
     }
 
     public async init() {
@@ -26,9 +27,15 @@ export class Game {
 
         // add callback for spin
         this._uiManager.init(() => {
-            if ( this._isRunning ) return;
-            this._isRunning = true;
-            this._reelManager.start(() => this._isRunning = false);
+            if ( this._reelManager.isRunning ) return;
+
+            this._reelManager.start(() => {
+                this._winManager.evaluateWins(this._reelManager.reels)
+            });
+
+            this._winManager.hide();
         });
+
+        this._winManager.init();
     }
 }

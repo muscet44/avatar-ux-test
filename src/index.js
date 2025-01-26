@@ -7,7 +7,11 @@ import { Game } from './game';
     const app = new Application();
 
     // Initialize the application
-    await app.init({ background: '#1099bb', resizeTo: document.body });
+    await app.init({ 
+        background: '#1099bb', 
+        resizeTo: document.body,
+        height: document.body.clientHeight
+    });
 
     // Append the application canvas to the document body
     document.body.appendChild(app.canvas);

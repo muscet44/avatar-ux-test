@@ -1,15 +1,19 @@
 import { Application, Graphics, Text, TextStyle } from "pixi.js";
+import { ReelConfig } from "./types";
 
 export class UIManager {
-    constructor(protected _pixiApp: Application) {
-
-    }
+    constructor(
+        protected _reelConfig: ReelConfig,
+        protected _pixiApp: Application
+    ) { }
 
     public init(spinCallback: () => void): void {
+        const { screen } = this._pixiApp;
         const marginTop = 200;
-        const top = new Graphics().rect(0, 0, this._pixiApp.screen.width, marginTop).fill({ color: 0x0 });
-        const bottom = new Graphics().rect(0, 0, this._pixiApp.screen.width, marginTop).fill({ color: 0x0 });
-        bottom.y = 500;
+        const reelHeight = this._reelConfig.row * this._reelConfig.symbolSize;
+        const top = new Graphics().rect(0, 0, screen.width, marginTop).fill({ color: 0x0 });
+        const bottom = new Graphics().rect(0, 0, screen.width, screen.height - marginTop - reelHeight).fill({ color: 0x0 });
+        bottom.y = marginTop + reelHeight;
 
         this._pixiApp.stage.addChild(top);
         this._pixiApp.stage.addChild(bottom);
@@ -28,10 +32,10 @@ export class UIManager {
         top.addChild(headerText);
 
         // Spin Button
-        const playText = new Text('Spin', style);
-        playText.x = Math.round((bottom.width - playText.width) / 2);
-        playText.y = 20;
-        bottom.addChild(playText);
+        const spinText = new Text('Spin', style);
+        spinText.x = Math.round((bottom.width - spinText.width) / 2);
+        spinText.y = 20;
+        bottom.addChild(spinText);
 
         bottom.eventMode = 'static';
         bottom.cursor = 'pointer';

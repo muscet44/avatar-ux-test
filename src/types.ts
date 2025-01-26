@@ -10,8 +10,7 @@ export interface ReelConfig {
 
 export interface Reel {
     symbols: Symbol[],
-    container: Container,
-    position: number
+    container: Container
 }
 
 export interface ReelTween {
@@ -22,4 +21,9 @@ export interface ReelTween {
     time: number,
     complete: Function | null,
     start: number
+}
+
+export interface Win {
+    symbols: Symbol[],
+    amount: number
 }

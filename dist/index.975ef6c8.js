@@ -604,7 +604,8 @@ var _game = require("./game");
     // Initialize the application
     await app.init({
         background: '#1099bb',
-        resizeTo: document.body
+        resizeTo: document.body,
+        height: document.body.clientHeight
     });
     // Append the application canvas to the document body
     document.body.appendChild(app.canvas);
@@ -52218,27 +52219,32 @@ var _reelManager = require("./reelManager");
 var _resourceManager = require("./resourceManager");
 var _symbolManager = require("./symbolManager");
 var _uiManager = require("./uiManager");
+var _winManager = require("./winManager");
 class Game {
     constructor(pixiApp, reelConfig){
         this._isRunning = false;
         this._resourceManager = new (0, _resourceManager.ResourceManager)();
         this._symbolManager = new (0, _symbolManager.SymbolManager)();
         this._reelManager = new (0, _reelManager.ReelManager)(reelConfig, pixiApp, this._symbolManager);
-        this._uiManager = new (0, _uiManager.UIManager)(pixiApp);
+        this._uiManager = new (0, _uiManager.UIManager)(reelConfig, pixiApp);
+        this._winManager = new (0, _winManager.WinManager)(pixiApp);
     }
     async init() {
         await this._resourceManager.init();
         this._reelManager.init();
         // add callback for spin
         this._uiManager.init(()=>{
-            if (this._isRunning) return;
-            this._isRunning = true;
-            this._reelManager.start(()=>this._isRunning = false);
+            if (this._reelManager.isRunning) return;
+            this._reelManager.start(()=>{
+                this._winManager.evaluateWins(this._reelManager.reels);
+            });
+            this._winManager.hide();
         });
+        this._winManager.init();
     }
 }
 
-},{"./resourceManager":"8roE0","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./reelManager":"5wDG2","./symbolManager":"iPwF3","./uiManager":"jn6GH"}],"8roE0":[function(require,module,exports,__globalThis) {
+},{"./resourceManager":"8roE0","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./reelManager":"5wDG2","./symbolManager":"iPwF3","./uiManager":"jn6GH","./winManager":"1r8jy"}],"8roE0":[function(require,module,exports,__globalThis) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "getTextureByName", ()=>getTextureByName);
@@ -52305,6 +52311,9 @@ class Symbol {
         this._container = new (0, _pixiJs.Container)();
         this.initTextures();
     }
+    get id() {
+        return this._id;
+    }
     get container() {
         return this._container;
     }
@@ -52326,9 +52335,14 @@ class Symbol {
     }
     win() {
         this._sprite.texture = this._winTexture;
+        this._sprite.tint = 0xffffff;
+    }
+    noWin() {
+        this._sprite.tint = 0x999999;
     }
     stop() {
         this._sprite.texture = this._mainTexture;
+        this._sprite.tint = 0xffffff;
     }
     initTextures() {
         this.setTextures();
@@ -52351,25 +52365,51 @@ parcelHelpers.export(exports, "ReelManager", ()=>ReelManager);
 var _pixiJs = require("pixi.js");
 var _symbolManager = require("./symbolManager");
 class ReelManager {
+    get isRunning() {
+        return this._isRunning;
+    }
+    get reels() {
+        return this._reels;
+    }
     constructor(_reelConfig, _pixiApp, _symbolManager){
         this._reelConfig = _reelConfig;
         this._pixiApp = _pixiApp;
         this._symbolManager = _symbolManager;
         this._reels = [];
         this._tweening = [];
+        this._isRunning = false;
     }
     init() {
         this.initReels();
         this.initTicker();
     }
     start(endCallback) {
+        this._isRunning = true;
         for(let i = 0; i < this._reels.length; i++){
             const reel = this._reels[i];
-            const target = reel.position + 10 + i * 5;
-            const time = 1000 + i * 300;
-            this.tweenTo(reel, reel.position, target, time, backout(0.5), i === this._reelConfig.reel - 1 ? ()=>{
+            // add fake symbols and next real symbols
+            const fakeSymbols = 5;
+            for(let j = 0; j < fakeSymbols + this._reelConfig.row; j++){
+                const symbol = this._symbolManager.createSymbol(getRandomSymbolId());
+                reel.container.addChildAt(symbol.container, 0);
+                reel.symbols.unshift(symbol);
+            }
+            const symbolsAdded = fakeSymbols + this._reelConfig.row;
+            // re-set reel position
+            reel.container.y = -symbolsAdded * this._reelConfig.symbolSize;
+            // re-set symbols position
+            reel.symbols.forEach((symbol, index)=>{
+                symbol.y = this._reelConfig.symbolSize * index;
+            });
+            const target = 0;
+            const time = 500 + i * 300;
+            this.tweenTo(reel, reel.container.y, target, time, backout(0.5), i === this._reelConfig.reel - 1 ? ()=>{
+                this._isRunning = false;
+                this.trimReel(reel);
                 endCallback();
-            } : null);
+            } : ()=>{
+                this.trimReel(reel);
+            });
         }
     }
     initReels() {
@@ -52378,15 +52418,13 @@ class ReelManager {
         for(let i = 0; i < this._reelConfig.reel; i++){
             const reelContainer = new (0, _pixiJs.Container)();
             reelContainer.x = i * this._reelConfig.reelWidth;
-            reelContainer.y = this._reelConfig.symbolSize;
             reelsContainer.addChild(reelContainer);
             const reel = {
                 symbols: [],
-                container: reelContainer,
-                position: 0
+                container: reelContainer
             };
-            // Build the symbols, last row is bumper symbol
-            for(let j = 0; j < this._reelConfig.row + 1; j++){
+            // Build the symbols
+            for(let j = 0; j < this._reelConfig.row; j++){
                 const randomSymbolId = getRandomSymbolId();
                 const symbol = this._symbolManager.createSymbol(randomSymbolId);
                 symbol.y = j * this._reelConfig.symbolSize;
@@ -52398,7 +52436,7 @@ class ReelManager {
         this._pixiApp.stage.addChild(reelsContainer);
         const marginTop = 200;
         const reelsWidth = this._reelConfig.reelWidth * this._reelConfig.reel;
-        reelsContainer.y = marginTop - this._reelConfig.symbolSize / 2;
+        reelsContainer.y = marginTop + this._reelConfig.symbolSize / 2;
         reelsContainer.x = this._pixiApp.screen.width / 2 - reelsWidth / 2 + this._reelConfig.symbolSize / 2;
     }
     initTicker() {
@@ -52410,25 +52448,27 @@ class ReelManager {
             for(let i = 0; i < this._tweening.length; i++){
                 const tween = this._tweening[i];
                 const phase = Math.min(1, (now - tween.start) / tween.time);
-                tween.reel.position = lerp(tween.value, tween.target, tween.easing(phase));
+                tween.reel.container.y = lerp(tween.value, tween.target, tween.easing(phase));
                 if (phase === 1) {
-                    tween.reel.position = tween.target;
+                    tween.reel.container.y = tween.target;
                     if (tween.complete) tween.complete(tween);
                     remove.push(tween);
                 }
             }
             for(let i = 0; i < remove.length; i++)this._tweening.splice(this._tweening.indexOf(remove[i]), 1);
-            // Update the slots.
-            for(let i = 0; i < this._reels.length; i++){
-                const reel = this._reels[i];
-                // Update symbol positions on reel.
-                for(let j = 0; j < reel.symbols.length; j++){
-                    const symbol = reel.symbols[j];
-                    const prevy = symbol.y;
-                    symbol.y = (reel.position + j) % reel.symbols.length * this._reelConfig.symbolSize - this._reelConfig.symbolSize;
-                    if (symbol.y < 0 && prevy > this._reelConfig.symbolSize) symbol.setSymbol(getRandomSymbolId());
-                }
-            }
+        // Update the slots.
+        // for (let i = 0; i < this._reels.length; i++) {
+        //     const reel = this._reels[i];
+        //     // Update symbol positions on reel.
+        //     for (let j = 0; j < reel.symbols.length; j++) {
+        //         const symbol = reel.symbols[j];
+        //         const prevy = symbol.y;
+        //         symbol.y = ((reel.position + j) % reel.symbols.length) * this._reelConfig.symbolSize - this._reelConfig.symbolSize;
+        //         if (symbol.y < 0 && prevy > this._reelConfig.symbolSize) {
+        //             symbol.setSymbol(getRandomSymbolId())
+        //         }
+        //     }
+        // }
         });
     }
     tweenTo(reel, value, target, time, easing, oncomplete) {
@@ -52443,6 +52483,10 @@ class ReelManager {
         };
         this._tweening.push(tween);
     }
+    trimReel(reel) {
+        reel.symbols = reel.symbols.slice(0, this._reelConfig.row);
+        reel.container.removeChildren(this._reelConfig.row, reel.container.children.length);
+    }
 }
 // Basic lerp funtion.
 function lerp(a1, a2, t) {
@@ -52453,7 +52497,9 @@ function lerp(a1, a2, t) {
 function backout(amount) {
     return (t)=>--t * t * ((amount + 1) * t + amount) + 1;
 }
+// let a = 0;
 function getRandomSymbolId() {
+    // return ++a % 4;
     return Math.floor(Math.random() * Object.keys((0, _symbolManager.symbolMap)).length);
 }
 
@@ -52463,18 +52509,21 @@ parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "UIManager", ()=>UIManager);
 var _pixiJs = require("pixi.js");
 class UIManager {
-    constructor(_pixiApp){
+    constructor(_reelConfig, _pixiApp){
+        this._reelConfig = _reelConfig;
         this._pixiApp = _pixiApp;
     }
     init(spinCallback) {
+        const { screen } = this._pixiApp;
         const marginTop = 200;
-        const top = new (0, _pixiJs.Graphics)().rect(0, 0, this._pixiApp.screen.width, marginTop).fill({
+        const reelHeight = this._reelConfig.row * this._reelConfig.symbolSize;
+        const top = new (0, _pixiJs.Graphics)().rect(0, 0, screen.width, marginTop).fill({
             color: 0x0
         });
-        const bottom = new (0, _pixiJs.Graphics)().rect(0, 0, this._pixiApp.screen.width, marginTop).fill({
+        const bottom = new (0, _pixiJs.Graphics)().rect(0, 0, screen.width, screen.height - marginTop - reelHeight).fill({
             color: 0x0
         });
-        bottom.y = 500;
+        bottom.y = marginTop + reelHeight;
         this._pixiApp.stage.addChild(top);
         this._pixiApp.stage.addChild(bottom);
         const style = new (0, _pixiJs.TextStyle)({
@@ -52489,15 +52538,222 @@ class UIManager {
         headerText.y = Math.round((marginTop - headerText.height) / 2);
         top.addChild(headerText);
         // Spin Button
-        const playText = new (0, _pixiJs.Text)('Spin', style);
-        playText.x = Math.round((bottom.width - playText.width) / 2);
-        playText.y = 20;
-        bottom.addChild(playText);
+        const spinText = new (0, _pixiJs.Text)('Spin', style);
+        spinText.x = Math.round((bottom.width - spinText.width) / 2);
+        spinText.y = 20;
+        bottom.addChild(spinText);
         bottom.eventMode = 'static';
         bottom.cursor = 'pointer';
         bottom.addListener('pointerdown', ()=>{
             spinCallback();
         });
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","pixi.js":"1arn0"}],"1r8jy":[function(require,module,exports,__globalThis) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "WinManager", ()=>WinManager);
+var _pixiJs = require("pixi.js");
+const paytable = [
+    [
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+    ],
+    [
+        0,
+        0,
+        0,
+        2,
+        3,
+        4
+    ],
+    [
+        0,
+        0,
+        0,
+        3,
+        4,
+        5
+    ],
+    [
+        0,
+        0,
+        0,
+        4,
+        5,
+        6
+    ],
+    [
+        0,
+        0,
+        0,
+        5,
+        6,
+        7
+    ],
+    [
+        0,
+        0,
+        0,
+        6,
+        7,
+        8
+    ],
+    [
+        0,
+        0,
+        0,
+        7,
+        8,
+        9
+    ],
+    [
+        0,
+        0,
+        0,
+        8,
+        9,
+        10
+    ],
+    [
+        0,
+        0,
+        0,
+        9,
+        10,
+        11
+    ],
+    [
+        0,
+        0,
+        0,
+        10,
+        11,
+        12
+    ],
+    [
+        0,
+        0,
+        0,
+        11,
+        12,
+        13
+    ],
+    [
+        0,
+        0,
+        0,
+        12,
+        13,
+        14
+    ],
+    [
+        0,
+        0,
+        0,
+        13,
+        14,
+        15
+    ],
+    [
+        0,
+        0,
+        0,
+        14,
+        15,
+        16
+    ],
+    [
+        0,
+        0,
+        0,
+        15,
+        16,
+        17
+    ]
+];
+class WinManager {
+    constructor(_pixiApp){
+        this._pixiApp = _pixiApp;
+        this._winLabelContainer = new (0, _pixiJs.Container)();
+        this._winLabelText = new (0, _pixiJs.Text)();
+    }
+    init() {
+        // winlabel
+        this._pixiApp.stage.addChild(this._winLabelContainer);
+        this._winLabelContainer.x = this._pixiApp.screen.width / 2;
+        this._winLabelContainer.y = 350;
+        this._winLabelContainer.visible = false;
+        const winLabelBg = new (0, _pixiJs.Graphics)().rect(-120, -30, 240, 60).fill({
+            color: 0x0,
+            alpha: 0.5
+        });
+        this._winLabelContainer.addChild(winLabelBg);
+        this._winLabelText.text = "Won 44 coins";
+        this._winLabelText.style = new (0, _pixiJs.TextStyle)({
+            fontFamily: 'Arial',
+            fontSize: 28,
+            fontWeight: 'bold',
+            fill: 0xffff66
+        });
+        this._winLabelText.anchor = 0.5;
+        this._winLabelContainer.addChild(this._winLabelText);
+    }
+    evaluateWins(reels) {
+        // get the first symbols and record streak
+        const reel0 = reels[0];
+        let wins = [];
+        reel0.symbols.forEach((symbol)=>{
+            let win = {
+                symbols: [
+                    symbol
+                ],
+                amount: 0
+            };
+            let streak = 1;
+            for(let i = 1; i < reels.length; i++){
+                const reel = reels[i];
+                const match = reel.symbols.filter((nextSymbol)=>symbol.id === nextSymbol.id);
+                if (match.length) {
+                    match.forEach((matchedSymbol)=>{
+                        win.symbols.push(matchedSymbol);
+                    });
+                    streak++;
+                } else break;
+            }
+            if (streak >= 3) {
+                win.amount = this.getPayout(symbol.id, streak);
+                wins.push(win);
+            }
+        });
+        if (wins.length) {
+            this.showNoWins(reels);
+            this.showWins(wins);
+        }
+    }
+    hide() {
+        this._winLabelContainer.visible = false;
+    }
+    getPayout(id, streak) {
+        return paytable[id][streak];
+    }
+    showNoWins(reels) {
+        reels.forEach((reel)=>{
+            reel.symbols.forEach((symbol)=>symbol.noWin());
+        });
+    }
+    showWins(wins) {
+        wins.forEach((win)=>{
+            win.symbols.forEach((symbol)=>symbol.win());
+        });
+        this._winLabelContainer.visible = true;
+        const totalWin = wins.reduce((prev, curr)=>prev += curr.amount, 0);
+        this._winLabelText.text = `Won ${totalWin} coins`;
     }
 }
 

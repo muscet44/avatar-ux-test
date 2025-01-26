@@ -9,9 +9,13 @@ export class Symbol {
     protected _winTexture: Texture = new Texture();
     protected _sprite: Sprite = new Sprite();
 
-    constructor(public _id: number) {
+    constructor(private _id: number) {
         this._container = new Container();
         this.initTextures();
+    }
+
+    public get id(): number {
+        return this._id;
     }
 
     public get container(): Container {
@@ -41,10 +45,16 @@ export class Symbol {
 
     public win(): void {
         this._sprite.texture = this._winTexture;
+        this._sprite.tint = 0xffffff;
+    }
+
+    public noWin(): void {
+        this._sprite.tint = 0x999999;
     }
 
     public stop(): void {
         this._sprite.texture = this._mainTexture;
+        this._sprite.tint = 0xffffff;
     }
 
     protected initTextures(): void {
